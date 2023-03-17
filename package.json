@@ -1,0 +1,14 @@
+{
+  "devDependencies": {
+    "hardhat": "^2.13.0"
+  },
+  "name": "zorro-defi-manager",
+  "version": "1.0.0",
+  "description": "Zorro protocol for managing cross chain DeFi positions",
+  "dependencies": {},
+  "scripts": {
+    "test": "mocha"
+  },
+  "author": "Zorro",
+  "license": "ISC"
+}
