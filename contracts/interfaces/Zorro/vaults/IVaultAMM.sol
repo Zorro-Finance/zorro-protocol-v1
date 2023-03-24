@@ -34,6 +34,39 @@ interface IVaultAMM is IVault {
         uint256 _maxSlippageFactor
     );
 
+    /* Structs */
+
+    struct VaultAMMSwapPaths {
+        address[] stablecoinToToken0;
+        address[] stablecoinToToken1;
+        address[] token0ToStablecoin;
+        address[] token1ToStablecoin;
+        address[] rewardsToToken0;
+        address[] rewardsToToken1;
+    }
+
+    struct VaultAMMPriceFeeds {
+        address token0;
+        address token1;
+        address stablecoin;
+        address rewards;
+    }
+
+    struct VaultAMMInit {
+        address asset;
+        address stablecoin;
+        address token0;
+        address token1;
+        address farmContract;
+        address rewardsToken;
+        bool isFarmable;
+        uint256 pid;
+        address pool;
+        VaultAMMSwapPaths swapPaths;
+        VaultAMMPriceFeeds priceFeeds;
+        VaultInit baseInit;
+    }
+
     /* Functions */
 
     // Cash flow
@@ -52,7 +85,8 @@ interface IVaultAMM is IVault {
 
     /// @notice Withdraws main asset and sends back to sender
     /// @param _shares The number of shares of the main asset to withdraw
-    function withdraw(uint256 _shares) external;
+    /// @param _maxSlippageFactor The slippage tolerance (9900 = 1%)
+    function withdraw(uint256 _shares, uint256 _maxSlippageFactor) external;
 
     /// @notice Withdraws main asset, converts to USD*, and sends back to sender
     /// @param _shares The number of shares of the main asset to withdraw
@@ -64,6 +98,10 @@ interface IVaultAMM is IVault {
     /// @notice The total amount of assets deposited and locked
     /// @return The amount in units of the main asset
     function assetLockedTotal() external view returns (uint256);
+
+    /// @notice When the last earn() was called
+    /// @return The block timestamp
+    function lastEarn() external view returns (uint256);
 
     // Key tokens, contracts, and config
 
@@ -89,7 +127,7 @@ interface IVaultAMM is IVault {
 
     /// @notice The address of the farm token (e.g. CAKE, JOE)
     /// @return The address of the token
-    function farmToken() external view returns (address);
+    function rewardsToken() external view returns (address);
 
     /// @notice The LP pool address
     /// @return The address of the pool

@@ -20,7 +20,7 @@ import "../libraries/SafeSwap.sol";
 
 /// @title VaultBase
 /// @notice Base contract for all vaults
-contract VaultBase is
+abstract contract VaultBase is
     ERC20Upgradeable,
     OwnableUpgradeable,
     PausableUpgradeable,
@@ -40,13 +40,24 @@ contract VaultBase is
     /* Constructor */
 
     /// @notice Upgradeable constructor
-    /// @param _asset The main asset for the underlying pool
-    /// @param _stablecoin The default stablecoin to use for USD deposits/withdrawals
+    /// @param _initVal A VaultInit struct
+    /// @param _timelockOwner The owner address (timelock)
     function initialize(
-        address _asset,
-        address _stablecoin
+        VaultInit memory _initVal,
+        address _timelockOwner
     ) public virtual initializer {
-        // TODO: How should this be different from the AMM one?
+        // Set initial values
+        treasury = _initVal.treasury;
+        router = _initVal.router;
+        entranceFeeFactor = _initVal.entranceFeeFactor;
+        withdrawFeeFactor = _initVal.withdrawFeeFactor;
+        defaultSlippageFactor = 9900; // 1%
+
+        // Transfer ownership to the timelock controller
+        _transferOwnership(_timelockOwner);
+
+        // Call the ERC20 constructor to set initial values
+        super.__ERC20_init("ZOR LP Vault", "ZLPV");
     }
 
     /* State */
@@ -67,10 +78,15 @@ contract VaultBase is
 
     /* Setters */
 
+    /// @notice Sets treasury wallet address
+    /// @param _treasury The address for the treasury contract/wallet
     function setTreasury(address _treasury) external onlyOwner {
         treasury = _treasury;
     }
 
+    /// @notice Sets the fee params
+    /// @param _entranceFeeFactor The deposit fee (9900 = 1%)
+    /// @param _withdrawFeeFeeFactor The withdrawal fee (9900 = 1%)
     function setFeeParams(
         uint256 _entranceFeeFactor,
         uint256 _withdrawFeeFeeFactor
@@ -79,16 +95,22 @@ contract VaultBase is
         withdrawFeeFactor = _withdrawFeeFeeFactor;
     }
 
+    /// @notice Sets the default slippage factor
+    /// @param _slippageFactor The slippage tolerance (9900 = 1%)
     function setDefaultSlippageFactor(
         uint256 _slippageFactor
     ) external onlyOwner {
         defaultSlippageFactor = _slippageFactor;
     }
 
+    /// @notice Sets swap paths for AMM swaps
+    /// @param _path The array of tokens representing the swap path
     function setSwapPaths(address[] memory _path) external onlyOwner {
         _setSwapPaths(_path);
     }
 
+    /// @notice Internal function for setting swap paths
+    /// @param _path The array of tokens representing the swap path
     function _setSwapPaths(address[] memory _path) internal {
         // Check to make sure path not empty
         if (_path.length == 0) {
@@ -105,6 +127,16 @@ contract VaultBase is
         swapPathLength[_startToken][_endToken] = uint16(_path.length);
     }
 
+    /// @notice Sets price feed for a given token
+    /// @param _token The token that the price feed is for
+    /// @param _priceFeedAddress The address of the Chainlink compatible price feed
+    function setPriceFeed(address _token, address _priceFeedAddress) external onlyOwner {
+        _setPriceFeed(_token, _priceFeedAddress);
+    }
+
+    /// @notice Internal function for setting the price feed
+    /// @param _token The token that the price feed is for
+    /// @param _priceFeedAddress The address of the Chainlink compatible price feed
     function _setPriceFeed(address _token, address _priceFeedAddress) internal {
         priceFeeds[_token] = AggregatorV3Interface(_priceFeedAddress);
     }
@@ -131,12 +163,12 @@ contract VaultBase is
         AggregatorV3Interface _priceFeed1 = priceFeeds[_endToken];
 
         // If price feed exists, use latest round data. If not, assign zero
-        if (_priceFeed0.decimals() == 0) {
+        if (address(_priceFeed0) == address(0)) {
             _priceTokens[0] = 0;
         } else {
             _priceTokens[0] = _priceFeed0.getExchangeRate();
         }
-        if (_priceFeed1.decimals() == 0) {
+        if (address(_priceFeed1) == address(0)) {
             _priceTokens[1] = 0;
         } else {
             _priceTokens[1] = _priceFeed1.getExchangeRate();

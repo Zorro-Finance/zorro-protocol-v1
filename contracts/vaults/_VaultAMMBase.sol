@@ -18,24 +18,49 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
     /* Constructor */
 
     /// @notice Upgradeable constructor
-    /// @param _asset The main asset for the underlying pool
-    /// @param _stablecoin The default stablecoin to use for USD deposits/withdrawals
+    /// @param _initVal A VaultAMMInit struct
+    /// @param _timelockOwner The owner address (timelock)
     function initialize(
-        address _asset,
-        address _stablecoin
-    ) public override initializer {
-        asset = _asset;
-        stablecoin = _stablecoin;
+        VaultAMMInit memory _initVal,
+        address _timelockOwner
+    ) public initializer {
+        // Set contract config
+        asset = _initVal.asset;
+        stablecoin = _initVal.stablecoin;
+        token0 = _initVal.token0;
+        token1 = _initVal.token1;
+        farmContract = _initVal.farmContract;
+        rewardsToken = _initVal.rewardsToken;
+        isFarmable = _initVal.isFarmable;
+        pid = _initVal.pid;
+        pool = _initVal.pool;
 
-        // TODO: Initializer for ERC20 (token, symbol, decimals etc.)
+        // Set swap paths
+        _setSwapPaths(_initVal.swapPaths.stablecoinToToken0);
+        _setSwapPaths(_initVal.swapPaths.stablecoinToToken1);
+        _setSwapPaths(_initVal.swapPaths.token0ToStablecoin);
+        _setSwapPaths(_initVal.swapPaths.token1ToStablecoin);
+        _setSwapPaths(_initVal.swapPaths.rewardsToToken0);
+        _setSwapPaths(_initVal.swapPaths.rewardsToToken1);
 
-        // TODO: All the other init vals.
+        // Set price feeds
+        _setPriceFeed(token0, _initVal.priceFeeds.token0);
+        _setPriceFeed(token1, _initVal.priceFeeds.token1);
+        _setPriceFeed(stablecoin, _initVal.priceFeeds.stablecoin);
+        _setPriceFeed(rewardsToken, _initVal.priceFeeds.rewards);
+
+        // Call parent constructor
+        super.initialize(
+            _initVal.baseInit,
+            _timelockOwner
+        );
     }
 
     /* State */
 
     // Accounting
     uint256 public assetLockedTotal;
+    uint256 public lastEarn;
 
     // Key tokens, contracts, and config
     address public asset;
@@ -43,14 +68,19 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
     address public token0;
     address public token1;
     address public farmContract;
-    address public farmToken;
+    address public rewardsToken;
     bool public isFarmable;
     uint256 public pid;
     address public pool;
 
     /* Setters */
 
-    // TODO: Docstrings for ALL setters below
+    /// @notice Sets key tokens/contract addresses for this contract
+    /// @param _asset The main asset token
+    /// @param _stablecoin The USD token to use for this contract
+    /// @param _token0 The first token of the LP pair for this contract
+    /// @param _token1 The second token of the LP pair for this contract
+    /// @param _pool The LP pair address
     function setTokens(
         address _asset,
         address _stablecoin,
@@ -65,15 +95,20 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         pool = _pool;
     }
 
+    /// @notice Sets farm params for this contract (Masterchef)
+    /// @param _isFarmable Whether AMM protocol rewards are available
+    /// @param _farmContract The farm contract (Masterchef) address
+    /// @param _rewardsToken The reward token address
+    /// @param _pid The pool ID (pid) on the farm contract representing this pool
     function setFarmParams(
         bool _isFarmable,
         address _farmContract,
-        address _farmToken,
+        address _rewardsToken,
         uint256 _pid
     ) external onlyOwner {
         isFarmable = _isFarmable;
         farmContract = _farmContract;
-        farmToken = _farmToken;
+        rewardsToken = _rewardsToken;
         pid = _pid;
     }
 
@@ -205,7 +240,7 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
     }
 
     /// @inheritdoc	IVaultAMM
-    function withdraw(uint256 _shares) external nonReentrant {
+    function withdraw(uint256 _shares, uint256 _maxSlippageFactor) external nonReentrant {
         // Safe Transfer share tokens IN
         IERC20Upgradeable(address(this)).safeTransferFrom(
             _msgSender(),
@@ -214,7 +249,7 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         );
 
         // Call core withdrawal function
-        uint256 _amountWithdrawn = _withdraw(_shares, _msgSender());
+        uint256 _amountWithdrawn = _withdraw(_shares, _msgSender(), _maxSlippageFactor);
 
         // Emit log
         emit WithdrawAsset(pool, _shares, _amountWithdrawn);
@@ -233,13 +268,10 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         );
 
         // Call core withdrawal function
-        _withdraw(_shares, address(this));
+        _withdraw(_shares, address(this), _maxSlippageFactor);
 
         // Get balance of main asset token and reward token
         uint256 _balAsset = IERC20Upgradeable(asset).balanceOf(address(this));
-        uint256 _balRewards = IERC20Upgradeable(farmToken).balanceOf(
-            address(this)
-        );
 
         // Remove liquidity
         _exitPool(
@@ -275,17 +307,6 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
             );
         }
 
-        // Swap rewards token to USD*
-        if (farmToken != stablecoin) {
-            _safeSwap(
-                _balRewards,
-                farmToken,
-                stablecoin,
-                _maxSlippageFactor,
-                address(this)
-            );
-        }
-
         // Get balances of USD*
         uint256 _balUSD = IERC20Upgradeable(stablecoin).balanceOf(
             address(this)
@@ -299,16 +320,18 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
     /// @dev Internal withdraw function for unfarming, updating ledger, and transfering remaining investment
     /// @param _shares Number of shares to withdraw
     /// @param _destination Where to send withdrawn funds and rewards
+    /// @param _maxSlippageFactor The slippage tolerance (9900 = 1%)
     /// @return amountAsset The quantity of main asset token removed
     function _withdraw(
         uint256 _shares,
-        address _destination
+        address _destination,
+        uint256 _maxSlippageFactor
     ) internal virtual whenNotPaused returns (uint256 amountAsset) {
         // Preflight checks
         require(_shares > 0, "negShares");
 
         // Run earn function to harvest and reinvest
-        this.earn();
+        this.earn(_maxSlippageFactor);
 
         // Calculate proportional amount of token to unfarm
         uint256 _removableAmount = (_shares * assetLockedTotal) /
@@ -359,12 +382,15 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
     }
 
     /// @notice Harvests farm token and reinvests earnings
-    function earn() public virtual nonReentrant whenNotPaused {
+    /// @param _maxSlippageFactor The slippage tolerance (9900 = 1%)
+    function earn(
+        uint256 _maxSlippageFactor
+    ) public virtual nonReentrant whenNotPaused {
         // Harvest
         _unfarm(0);
 
         // Get balance of reward token
-        uint256 _balReward = IERC20Upgradeable(farmToken).balanceOf(
+        uint256 _balReward = IERC20Upgradeable(rewardsToken).balanceOf(
             address(this)
         );
 
@@ -373,38 +399,37 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
             // Swap to Tokens 0,1
             _safeSwap(
                 _balReward / 2,
-                farmToken,
+                rewardsToken,
                 token0,
-                defaultSlippageFactor,
+                _maxSlippageFactor,
                 address(this)
             );
             _safeSwap(
                 _balReward / 2,
-                farmToken,
+                rewardsToken,
                 token1,
-                defaultSlippageFactor,
+                _maxSlippageFactor,
                 address(this)
             );
         }
 
         // Get LP token
-        uint256 _balToken0 = IERC20Upgradeable(token0).balanceOf(
-            address(this)
-        );
-        uint256 _balToken1 = IERC20Upgradeable(token1).balanceOf(
-            address(this)
-        );
+        uint256 _balToken0 = IERC20Upgradeable(token0).balanceOf(address(this));
+        uint256 _balToken1 = IERC20Upgradeable(token1).balanceOf(address(this));
         _joinPool(
             token0,
             token1,
             _balToken0,
             _balToken1,
-            defaultSlippageFactor,
+            _maxSlippageFactor,
             address(this)
         );
 
         // Re-deposit LP token
         _farm();
+
+        // Update lastEarn timestamp
+        lastEarn = block.timestamp;
     }
 
     /* Utilities */

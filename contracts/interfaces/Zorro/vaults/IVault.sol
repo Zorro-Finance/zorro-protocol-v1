@@ -11,6 +11,15 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 interface IVault is IERC20Upgradeable {
     /* Events */
 
+    /* Structs */
+
+    struct VaultInit {
+        address treasury;
+        address router;
+        uint256 entranceFeeFactor;
+        uint256 withdrawFeeFactor;
+    }
+
     /* Functions */
 
     // Key wallets/contracts
