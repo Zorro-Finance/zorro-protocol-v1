@@ -1,12 +1,14 @@
-const vaultAMMInit = () => ({
-    asset: '',
-    token0: '',
-    token1: '',
-    farmContract: '',
-    rewardsToken: '',
+import { zeroAddress } from "./constants";
+
+const vaultAMMInit = (): any => ({
+    asset: zeroAddress,
+    token0: zeroAddress,
+    token1: zeroAddress,
+    farmContract: zeroAddress,
+    rewardsToken: zeroAddress,
     isFarmable: true,
     pid: 0,
-    pool: '',
+    pool: zeroAddress,
     swapPaths: {
         stablecoinToToken0: [],
         stablecoinToToken1: [],
@@ -16,15 +18,15 @@ const vaultAMMInit = () => ({
         rewardsToToken1: []
     },
     priceFeeds: {
-        token0: '',
-        token1: '',
-        stablecoin: '',
-        rewards: '',
+        token0: zeroAddress,
+        token1: zeroAddress,
+        stablecoin: zeroAddress,
+        rewards: zeroAddress,
     },
     baseInit: {
-        treasury: '',
-        router: '',
-        stablecoin: '',
+        treasury: zeroAddress,
+        router: zeroAddress,
+        stablecoin: zeroAddress,
         entranceFeeFactor: 0,
         withdrawFeeFactor: 0,
     },

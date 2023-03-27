@@ -1,14 +1,12 @@
-const zeroAddress = '0x0000000000000000000000000000000000000000';
+export const zeroAddress = '0x0000000000000000000000000000000000000000';
 
-exports.zeroAddress = zeroAddress;
-
-exports.owners = [
+export const owners = [
     // TODO: Put in Sierra + Delta wallets
 ];
 
-exports.defaultTimelockPeriodSecs = 24 * 3600;
+export const defaultTimelockPeriodSecs = 24 * 3600;
 
-exports.chains = {
+export const chains = {
     avax: {
         xChain: {
             lzChainId: 106,
@@ -95,7 +93,7 @@ exports.chains = {
     },
 };
 
-exports.vaultFees = {
+export const vaultFees = {
     entranceFeeFactor: 0,
     withdrawFeeFactor: 0,
 };

@@ -29,7 +29,7 @@ abstract contract VaultBase is
 {
     /* Constants */
 
-    uint256 BP_DENOMINATOR = 10000; // Basis point denominator
+    uint256 public constant BP_DENOMINATOR = 10000; // Basis point denominator
 
     /* Libraries */
 
@@ -42,7 +42,7 @@ abstract contract VaultBase is
     /// @notice Upgradeable constructor
     /// @param _initVal A VaultInit struct
     /// @param _timelockOwner The owner address (timelock)
-    function initialize(
+    function __VaultBase_init(
         VaultInit memory _initVal,
         address _timelockOwner
     ) public virtual initializer {

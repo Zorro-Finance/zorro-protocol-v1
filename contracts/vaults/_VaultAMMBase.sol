@@ -53,7 +53,7 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         _setPriceFeed(rewardsToken, _initVal.priceFeeds.rewards);
 
         // Call parent constructor
-        super.initialize(
+        super.__VaultBase_init(
             _initVal.baseInit,
             _timelockOwner
         );

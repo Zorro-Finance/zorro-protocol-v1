@@ -29,7 +29,7 @@ contract ControllerXChain is
 {
     /* Constants */
 
-    uint256 BP_DENOMINATOR = 10000; // Basis point denominator
+    uint256 public constant BP_DENOMINATOR = 10000; // Basis point denominator
 
     /* Libraries */
 

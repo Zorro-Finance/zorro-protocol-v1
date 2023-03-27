@@ -1,7 +1,7 @@
 import { time, loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 import { expect } from "chai";
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 import {deploymentArgs} from '../../helpers/deployments';
 
 describe('VaultAMMBase', () => {
@@ -10,18 +10,22 @@ describe('VaultAMMBase', () => {
         const [owner, otherAccount] = await ethers.getSigners();
 
         // Get init arguments for contract deployment
-        const initArgs = deploymentArgs(owner.address).avax.VaultAMM.TJ_AVAX_USDC;
+        const initArgs: any[] = deploymentArgs(owner.address).avax.VaultAMM.TJ_AVAX_USDC;
 
         // Get contract factory
         const Vault = await ethers.getContractFactory('TJ_AVAX_USDC');
-        const vault = await Vault.deploy(...initArgs);
+        const vault = await upgrades.deployProxy(Vault, initArgs);
+        await vault.deployed();
 
         return {vault, owner, otherAccount};
     }
 
     describe('Depoloyment', () => {
-        xit('Should set the right initial values and owner', async () => {
-            // TODO
+        it('Should set the right initial values and owner', async () => {
+            // TODO fill this in! 
+
+            const {vault, owner} = await loadFixture(deployVaultAMMBaseFixture);
+
         });
     });
 
