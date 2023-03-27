@@ -233,7 +233,7 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
     }
 
     /// @notice Internal function for farming Want token. Responsible for staking Want token in a MasterChef/MasterApe-like contract
-    function _farm() internal virtual {
+    function _farm() internal virtual whenNotPaused {
         // Check if farmable
         if (isFarmable) {
             // Get LP balance
@@ -384,7 +384,7 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
 
     /// @notice Internal function for unfarming Asset token. Responsible for unstaking Asset token from MasterChef/MasterApe contracts
     /// @param _amount the amount of Asset tokens to withdraw. If 0, will only harvest and not withdraw
-    function _unfarm(uint256 _amount) internal virtual {
+    function _unfarm(uint256 _amount) internal virtual whenNotPaused {
         // Check if farmable
         if (isFarmable) {
             // Withdraw the Asset tokens from the Farm contract

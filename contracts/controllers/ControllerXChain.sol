@@ -82,7 +82,7 @@ contract ControllerXChain is
     /// @param _sgRouter Stargate Router address
     /// @param _chain LZ chain ID
     /// @param _sgPoolId Stargate Pool ID
-    function setKeyXChainContracts(
+    function setKeyXChainParams(
         address _lzEndpoint,
         address _sgRouter,
         uint16 _chain,
