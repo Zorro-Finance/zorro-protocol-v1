@@ -49,6 +49,7 @@ abstract contract VaultBase is
         // Set initial values
         treasury = _initVal.treasury;
         router = _initVal.router;
+        stablecoin = _initVal.stablecoin;
         entranceFeeFactor = _initVal.entranceFeeFactor;
         withdrawFeeFactor = _initVal.withdrawFeeFactor;
         defaultSlippageFactor = 9900; // 1%
@@ -65,6 +66,7 @@ abstract contract VaultBase is
     // Key wallets/contracts
     address public treasury;
     address public router;
+    address public stablecoin;
 
     // Accounting & Fees
     uint256 public entranceFeeFactor;
@@ -142,161 +144,16 @@ abstract contract VaultBase is
     }
 
     /* Utilities */
-
-    /// @notice Safely swaps from one token to another
-    /// @dev Tries to use a Chainlink price feed oracle if one exists
-    /// @param _amountIn The quantity of the origin token to swap
-    /// @param _startToken The origin token (to swap FROM)
-    /// @param _endToken The destination token (to swap TO)
-    /// @param _maxSlippageFactor The max slippage factor tolerated (9900 = 1%)
-    /// @param _destination Where to send the swapped token to
-    function _safeSwap(
-        uint256 _amountIn,
-        address _startToken,
-        address _endToken,
-        uint256 _maxSlippageFactor,
-        address _destination
-    ) internal {
-        // Get exchange rates of each token
-        uint256[] memory _priceTokens = new uint256[](2);
-        AggregatorV3Interface _priceFeed0 = priceFeeds[_startToken];
-        AggregatorV3Interface _priceFeed1 = priceFeeds[_endToken];
-
-        // If price feed exists, use latest round data. If not, assign zero
-        if (address(_priceFeed0) == address(0)) {
-            _priceTokens[0] = 0;
-        } else {
-            _priceTokens[0] = _priceFeed0.getExchangeRate();
-        }
-        if (address(_priceFeed1) == address(0)) {
-            _priceTokens[1] = 0;
-        } else {
-            _priceTokens[1] = _priceFeed1.getExchangeRate();
-        }
-
-        // Get decimals
-        uint8[] memory _decimals = new uint8[](2);
-        _decimals[0] = ERC20Upgradeable(_startToken).decimals();
-        _decimals[0] = ERC20Upgradeable(_endToken).decimals();
-
-        // Safe transfer
-        IERC20Upgradeable(_startToken).safeIncreaseAllowance(router, _amountIn);
-
-        // Perform swap
-        IAMMRouter02(router).safeSwap(
-            _amountIn,
-            _priceTokens,
-            _maxSlippageFactor,
-            swapPaths[_startToken][_endToken],
-            _decimals,
-            _destination,
-            block.timestamp + 300
-        );
-    }
-
-    /// @notice Internal function for adding liquidity to the pool of this contract
-    /// @param _token0 Address of the first token
-    /// @param _token1 Address of the second token
-    /// @param _token0Amt Quantity of Token0 to add
-    /// @param _token1Amt Quantity of Token1 to add
-    /// @param _maxSlippageFactor The max slippage allowed for swaps. 1000 = 0 %, 995 = 0.5%, etc.
-    /// @param _recipient The recipient of the LP token
-    function _joinPool(
-        address _token0,
-        address _token1,
-        uint256 _token0Amt,
-        uint256 _token1Amt,
-        uint256 _maxSlippageFactor,
-        address _recipient
-    ) internal {
-        // Approve spending
-        IERC20Upgradeable(_token0).safeIncreaseAllowance(router, _token0Amt);
-        IERC20Upgradeable(_token1).safeIncreaseAllowance(router, _token1Amt);
-
-        // Add liquidity
-        IAMMRouter02(router).addLiquidity(
-            _token0,
-            _token1,
-            _token0Amt,
-            _token1Amt,
-            (_token0Amt * _maxSlippageFactor) / BP_DENOMINATOR,
-            (_token1Amt * _maxSlippageFactor) / BP_DENOMINATOR,
-            _recipient,
-            block.timestamp + 600
-        );
-    }
-
-    /// @notice Internal function for removing liquidity from the pool of this contract
-    /// @dev NOTE: Assumes LP token is already on contract
-    /// @param _amountLP The amount of LP tokens to remove
-    /// @param _maxSlippageFactor The max slippage allowed for swaps. 10000 = 0 %, 9950 = 0.5%, etc.
-    /// @param _recipient The recipient of the underlying tokens upon pool exit
-    function _exitPool(
-        uint256 _amountLP,
-        address _pool,
-        address _token0,
-        address _token1,
-        uint256 _maxSlippageFactor,
-        address _recipient
-    ) internal {
-        // Init
-        uint256 _amount0Min;
-        uint256 _amount1Min;
-
-        {
-            _amount0Min = _calcMinAmt(
-                _amountLP,
-                _token0,
-                _pool,
-                _maxSlippageFactor
-            );
-            _amount1Min = _calcMinAmt(
-                _amountLP,
-                _token1,
-                _pool,
-                _maxSlippageFactor
-            );
-        }
-
-        // Approve
-        IERC20Upgradeable(_pool).safeIncreaseAllowance(
-                router,
-                _amountLP
-            );
-
-        // Remove liquidity
-        IAMMRouter02(router).removeLiquidity(
-            _token0,
-            _token1,
-            _amountLP,
-            _amount0Min,
-            _amount1Min,
-            _recipient,
-            block.timestamp + 300
-        );
-    }
-
-    /// @notice Calculates minimum amount out for exiting LP pool
-    /// @param _amountLP LP token qty
-    /// @param _token Address of one of the tokens in the pair
-    /// @param _pool Address of LP pair
-    /// @param _slippageFactor Slippage (9900 = 1% etc.)
-    function _calcMinAmt(
-        uint256 _amountLP,
-        address _token,
-        address _pool,
-        uint256 _slippageFactor
-    ) internal view returns (uint256) {
-        // Get total supply and calculate min amounts desired based on slippage
-        uint256 _totalSupply = IERC20Upgradeable(_pool).totalSupply();
-
-        // Get balance of token in pool
-        uint256 _balance = IERC20Upgradeable(_token).balanceOf(_pool);
-
-        // Return min token amount out
-        return
-            (_amountLP * _balance * _slippageFactor) /
-            (BP_DENOMINATOR * _totalSupply);
+    
+    /// @notice For owner to recover ERC20 tokens on this contract if stuck
+    /// @dev Does not permit usage for the Zorro token
+    /// @param _token ERC20 token address
+    /// @param _amount token quantity
+    function inCaseTokensGetStuck(address _token, uint256 _amount)
+        public
+        onlyOwner
+    {
+        IERC20Upgradeable(_token).safeTransfer(_msgSender(), _amount);
     }
 
     /* Maintenance Functions */

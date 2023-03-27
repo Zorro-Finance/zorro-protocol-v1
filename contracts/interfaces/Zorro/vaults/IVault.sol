@@ -16,6 +16,7 @@ interface IVault is IERC20Upgradeable {
     struct VaultInit {
         address treasury;
         address router;
+        address stablecoin;
         uint256 entranceFeeFactor;
         uint256 withdrawFeeFactor;
     }
@@ -32,6 +33,10 @@ interface IVault is IERC20Upgradeable {
     /// @return The address of the router
     function router() external view returns (address);
 
+    /// @notice The default stablecoin (e.g. USDC, BUSD)
+    /// @return The address of the stablecoin
+    function stablecoin() external view returns (address);
+
     // Accounting & Fees
 
     /// @notice Entrance fee - goes to treasury
@@ -45,7 +50,23 @@ interface IVault is IERC20Upgradeable {
 
     /// @notice Default value for slippage if not overridden by a specific func
     /// @dev 9900 results in 1% slippage (1 - 9900/10000)
+    /// @return The slippage factor numerator
     function defaultSlippageFactor() external view returns (uint256);
+
+    // Cash flow operations
+
+    /// @notice Converts USD* to main asset and deposits it
+    /// @param _amountUSD The amount of USD to deposit
+    /// @param _maxSlippageFactor Max amount of slippage tolerated per AMM operation (9900 = 1%)
+    function depositUSD(
+        uint256 _amountUSD,
+        uint256 _maxSlippageFactor
+    ) external;
+
+    /// @notice Withdraws main asset, converts to USD*, and sends back to sender
+    /// @param _shares The number of shares of the main asset to withdraw
+    /// @param _maxSlippageFactor Max amount of slippage tolerated per AMM operation (9900 = 1%)
+    function withdrawUSD(uint256 _shares, uint256 _maxSlippageFactor) external;
 
     // Token operations
 

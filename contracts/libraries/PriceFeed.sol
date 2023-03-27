@@ -4,6 +4,8 @@ pragma solidity ^0.8.18;
 
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
+/// @title PriceFeed
+/// @notice Library for getting exchange rates from price feeds, and other utilties
 library PriceFeed {
     /* Functions */
 

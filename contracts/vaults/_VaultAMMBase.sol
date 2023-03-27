@@ -2,11 +2,13 @@
 
 pragma solidity ^0.8.18;
 
-import "./_VaultBase.sol";
-
 import "../interfaces/Zorro/vaults/IVaultAMM.sol";
 
 import "../interfaces/Uniswap/IAMMFarm.sol";
+
+import "./_VaultBase.sol";
+
+import "../libraries/LPUtility.sol";
 
 /// @title VaultAMMBase
 /// @notice Abstract base contract for standard AMM based vaults
@@ -14,6 +16,8 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
     /* Libraries */
 
     using SafeERC20Upgradeable for IERC20Upgradeable;
+    using SafeSwapUni for IAMMRouter02;
+    using LPUtility for IAMMRouter02;
 
     /* Constructor */
 
@@ -26,7 +30,6 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
     ) public initializer {
         // Set contract config
         asset = _initVal.asset;
-        stablecoin = _initVal.stablecoin;
         token0 = _initVal.token0;
         token1 = _initVal.token1;
         farmContract = _initVal.farmContract;
@@ -64,7 +67,6 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
 
     // Key tokens, contracts, and config
     address public asset;
-    address public stablecoin;
     address public token0;
     address public token1;
     address public farmContract;
@@ -77,19 +79,16 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
 
     /// @notice Sets key tokens/contract addresses for this contract
     /// @param _asset The main asset token
-    /// @param _stablecoin The USD token to use for this contract
     /// @param _token0 The first token of the LP pair for this contract
     /// @param _token1 The second token of the LP pair for this contract
     /// @param _pool The LP pair address
     function setTokens(
         address _asset,
-        address _stablecoin,
         address _token0,
         address _token1,
         address _pool
     ) external onlyOwner {
         asset = _asset;
-        stablecoin = _stablecoin;
         token0 = _token0;
         token1 = _token1;
         pool = _pool;
@@ -130,7 +129,7 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         emit DepositAsset(pool, _amount, _sharesAdded);
     }
 
-    /// @inheritdoc	IVaultAMM
+    /// @inheritdoc	IVault
     function depositUSD(
         uint256 _amountUSD,
         uint256 _maxSlippageFactor
@@ -148,17 +147,23 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         );
 
         // Swap USD* into token0, token1
-        _safeSwap(
+        IAMMRouter02(router).safeSwap(
             _balUSD / 2,
             stablecoin,
             token0,
+            swapPaths[stablecoin][token0],
+            priceFeeds[stablecoin],
+            priceFeeds[token0],
             _maxSlippageFactor,
             address(this)
         );
-        _safeSwap(
+        IAMMRouter02(router).safeSwap(
             _balUSD / 2,
             stablecoin,
             token1,
+            swapPaths[stablecoin][token1],
+            priceFeeds[stablecoin],
+            priceFeeds[token1],
             _maxSlippageFactor,
             address(this)
         );
@@ -168,7 +173,7 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         uint256 _balToken1 = IERC20Upgradeable(token1).balanceOf(address(this));
 
         // Add liquidity
-        _joinPool(
+        IAMMRouter02(router).joinPool(
             token0,
             token1,
             _balToken0,
@@ -255,7 +260,7 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         emit WithdrawAsset(pool, _shares, _amountWithdrawn);
     }
 
-    /// @inheritdoc	IVaultAMM
+    /// @inheritdoc	IVault
     function withdrawUSD(
         uint256 _shares,
         uint256 _maxSlippageFactor
@@ -274,7 +279,7 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         uint256 _balAsset = IERC20Upgradeable(asset).balanceOf(address(this));
 
         // Remove liquidity
-        _exitPool(
+        IAMMRouter02(router).exitPool(
             _balAsset,
             pool,
             token0,
@@ -289,19 +294,25 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
 
         // Swap Tokens 0,1 to USD*
         if (token0 != stablecoin) {
-            _safeSwap(
+            IAMMRouter02(router).safeSwap(
                 _balToken0,
                 token0,
                 stablecoin,
+                swapPaths[token0][stablecoin],
+                priceFeeds[token0],
+                priceFeeds[stablecoin],
                 _maxSlippageFactor,
                 address(this)
             );
         }
         if (token1 != stablecoin) {
-            _safeSwap(
+            IAMMRouter02(router).safeSwap(
                 _balToken1,
                 token1,
                 stablecoin,
+                swapPaths[token1][stablecoin],
+                priceFeeds[token1],
+                priceFeeds[stablecoin],
                 _maxSlippageFactor,
                 address(this)
             );
@@ -397,17 +408,23 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         // Check to see if any rewards were obtained
         if (_balReward > 0) {
             // Swap to Tokens 0,1
-            _safeSwap(
+            IAMMRouter02(router).safeSwap(
                 _balReward / 2,
                 rewardsToken,
                 token0,
+                swapPaths[rewardsToken][token0],
+                priceFeeds[rewardsToken],
+                priceFeeds[token0],
                 _maxSlippageFactor,
                 address(this)
             );
-            _safeSwap(
+            IAMMRouter02(router).safeSwap(
                 _balReward / 2,
                 rewardsToken,
                 token1,
+                swapPaths[rewardsToken][token1],
+                priceFeeds[rewardsToken],
+                priceFeeds[token1],
                 _maxSlippageFactor,
                 address(this)
             );
@@ -416,7 +433,7 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         // Get LP token
         uint256 _balToken0 = IERC20Upgradeable(token0).balanceOf(address(this));
         uint256 _balToken1 = IERC20Upgradeable(token1).balanceOf(address(this));
-        _joinPool(
+        IAMMRouter02(router).joinPool(
             token0,
             token1,
             _balToken0,

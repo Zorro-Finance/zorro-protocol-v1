@@ -8,6 +8,7 @@ import "./IVault.sol";
 /// @notice Interface for Standard AMM based vaults
 interface IVaultAMM is IVault {
     /* Events */
+    
     event DepositAsset(
         address indexed _pool,
         uint256 indexed _amount,
@@ -54,7 +55,6 @@ interface IVaultAMM is IVault {
 
     struct VaultAMMInit {
         address asset;
-        address stablecoin;
         address token0;
         address token1;
         address farmContract;
@@ -75,23 +75,10 @@ interface IVaultAMM is IVault {
     /// @param _amount The amount of asset to deposit
     function deposit(uint256 _amount) external;
 
-    /// @notice Converts USD* to main asset and deposits it
-    /// @param _amountUSD The amount of USD to deposit
-    /// @param _maxSlippageFactor Max amount of slippage tolerated per AMM operation (9900 = 1%)
-    function depositUSD(
-        uint256 _amountUSD,
-        uint256 _maxSlippageFactor
-    ) external;
-
     /// @notice Withdraws main asset and sends back to sender
     /// @param _shares The number of shares of the main asset to withdraw
     /// @param _maxSlippageFactor The slippage tolerance (9900 = 1%)
     function withdraw(uint256 _shares, uint256 _maxSlippageFactor) external;
-
-    /// @notice Withdraws main asset, converts to USD*, and sends back to sender
-    /// @param _shares The number of shares of the main asset to withdraw
-    /// @param _maxSlippageFactor Max amount of slippage tolerated per AMM operation (9900 = 1%)
-    function withdrawUSD(uint256 _shares, uint256 _maxSlippageFactor) external;
 
     // Accounting
 
@@ -108,10 +95,6 @@ interface IVaultAMM is IVault {
     /// @notice The main asset (token) used in the underlying pool
     /// @return The address of the asset
     function asset() external view returns (address);
-
-    /// @notice The default stablecoin (e.g. USDC, BUSD)
-    /// @return The address of the stablecoin
-    function stablecoin() external view returns (address);
 
     /// @notice The first token of the LP pair
     /// @return The address of the token
