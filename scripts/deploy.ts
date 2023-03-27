@@ -1,4 +1,5 @@
 import { ethers } from "hardhat";
+import {writeFile} from 'fs';
 
 async function main() {
   const currentTimestampInSeconds = Math.round(Date.now() / 1000);
@@ -14,6 +15,13 @@ async function main() {
   console.log(
     `Lock with ${ethers.utils.formatEther(lockedAmount)}ETH and unlock timestamp ${unlockTime} deployed to ${lock.address}`
   );
+
+  writeFile('test.txt', 'hello world', err => {
+    if (err) {
+      console.error(err);
+    }
+    // file written successfully
+  });
 }
 
 // We recommend this pattern to be able to use async/await everywhere
