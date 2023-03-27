@@ -2,10 +2,21 @@ import { time, loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 import { expect } from "chai";
 import { ethers } from "hardhat";
+import {deploymentArgs} from '../../helpers/deployments';
 
 describe('VaultAMMBase', () => {
     async function deployVaultAMMBaseFixture() {
-        // TODO
+        // Contracts are deployed using the first signer/account by default
+        const [owner, otherAccount] = await ethers.getSigners();
+
+        // Get init arguments for contract deployment
+        const initArgs = deploymentArgs(owner.address).avax.VaultAMM.TJ_AVAX_USDC;
+
+        // Get contract factory
+        const Vault = await ethers.getContractFactory('TJ_AVAX_USDC');
+        const vault = await Vault.deploy(...initArgs);
+
+        return {vault, owner, otherAccount};
     }
 
     describe('Depoloyment', () => {
