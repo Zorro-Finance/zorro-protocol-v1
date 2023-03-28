@@ -3,7 +3,7 @@ import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 import {deploymentArgs} from '../../helpers/deployments/VaultAMM/TraderJoe/deployment';
-import { zeroAddress } from "../../helpers/constants";
+import { zeroAddress, chains, vaultFees } from "../../helpers/constants";
 
 describe('VaultBase', () => {
     async function deployVaultBaseFixture() {
@@ -14,7 +14,7 @@ describe('VaultBase', () => {
         const initArgs: any[] = deploymentArgs('avax', 'TJ_AVAX_USDC', owner.address);
 
         // Get contract factory
-        const Vault = await ethers.getContractFactory('TJ_AVAX_USDC');
+        const Vault = await ethers.getContractFactory('TraderJoeAMMV1');
         const vault = await upgrades.deployProxy(Vault, initArgs);
         await vault.deployed();
 
@@ -38,12 +38,11 @@ describe('VaultBase', () => {
             const decimals = await vault.decimals();
 
             // Test
-            // TODO: Change these to actual values (not zero)
-            expect(treasury).to.equal(zeroAddress);
-            expect(router).to.equal(zeroAddress);
-            expect(stablecoin).to.equal(zeroAddress);
-            expect(entranceFeeFactor).to.equal(0);
-            expect(withdrawFeeFactor).to.equal(0);
+            expect(treasury).to.equal(chains.avax.admin.treasury);
+            expect(router).to.equal(chains.avax.infra.uniRouterAddress);
+            expect(stablecoin).to.equal(chains.avax.tokens.usdc);
+            expect(entranceFeeFactor).to.equal(vaultFees.entranceFeeFactor);
+            expect(withdrawFeeFactor).to.equal(vaultFees.withdrawFeeFactor);
             expect(defaultSlippageFactor).to.equal(9900);
             expect(name).to.equal('ZOR LP Vault');
             expect(symbol).to.equal('ZLPV');

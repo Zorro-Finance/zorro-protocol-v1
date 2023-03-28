@@ -3,7 +3,7 @@ import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 import {deploymentArgs} from '../../helpers/deployments/VaultAMM/TraderJoe/deployment';
-import { zeroAddress } from "../../helpers/constants";
+import { zeroAddress, chains } from "../../helpers/constants";
 
 describe('VaultAMMBase', () => {
     async function deployVaultAMMBaseFixture() {
@@ -14,7 +14,7 @@ describe('VaultAMMBase', () => {
         const initArgs: any[] = deploymentArgs('avax', 'TJ_AVAX_USDC', owner.address);
 
         // Get contract factory
-        const Vault = await ethers.getContractFactory('TJ_AVAX_USDC');
+        const Vault = await ethers.getContractFactory('TraderJoeAMMV1');
         const vault = await upgrades.deployProxy(Vault, initArgs);
         await vault.deployed();
 
@@ -36,19 +36,27 @@ describe('VaultAMMBase', () => {
             const pid = await vault.pid();
             const pool = await vault.pool();
 
-            // TODO: Check swap paths
-            // TODO: Check price feeds
+            // Check swap paths
+            expect(await vault.swapPathLength(chains.avax.tokens.wavax, chains.avax.tokens.usdc)).to.equal(2);
+            expect(await vault.swapPathLength(chains.avax.tokens.usdc, chains.avax.tokens.usdc)).to.equal(0);
+            expect(await vault.swapPathLength(chains.avax.tokens.wavax, chains.avax.tokens.usdc)).to.equal(2);
+            expect(await vault.swapPathLength(chains.avax.tokens.joe, chains.avax.tokens.wavax)).to.equal(2);
+            expect(await vault.swapPathLength(chains.avax.tokens.joe, chains.avax.tokens.usdc)).to.equal(2);
+
+            // Check price feeds
+            expect(await vault.priceFeeds(chains.avax.tokens.wavax)).to.equal(chains.avax.priceFeeds.avax);
+            expect(await vault.priceFeeds(chains.avax.tokens.usdc)).to.equal(chains.avax.priceFeeds.usdc);
+            expect(await vault.priceFeeds(chains.avax.tokens.joe)).to.equal(chains.avax.priceFeeds.joe);
 
             // Test
-            // TODO: Change these to actual values
-            expect(asset).to.equal(zeroAddress);
-            expect(token0).to.equal(zeroAddress);
-            expect(token1).to.equal(zeroAddress);
-            expect(farmContract).to.equal(zeroAddress);
-            expect(rewardsToken).to.equal(zeroAddress);
+            expect(asset).to.equal(chains.avax.protocols.traderjoe.pools.AVAX_USDC.pool);
+            expect(token0).to.equal(chains.avax.tokens.wavax);
+            expect(token1).to.equal(chains.avax.tokens.usdc);
+            expect(farmContract).to.equal(chains.avax.protocols.traderjoe.masterChef);
+            expect(rewardsToken).to.equal(chains.avax.tokens.joe);
             expect(isFarmable).to.equal(true);
-            expect(pid).to.equal(0);
-            expect(pool).to.equal(zeroAddress);
+            expect(pid).to.equal(chains.avax.protocols.traderjoe.pools.AVAX_USDC.pid);
+            expect(pool).to.equal(chains.avax.protocols.traderjoe.pools.AVAX_USDC.pool);
         });
     });
 

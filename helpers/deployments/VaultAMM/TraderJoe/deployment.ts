@@ -1,38 +1,38 @@
-import { chains, zeroAddress } from "../../../constants";
+import { chains, vaultFees, zeroAddress } from "../../../constants";
 import { ContractInitList } from "../../types";
 import { VaultAMMInit } from "../types";
 
 const contractInits: ContractInitList<VaultAMMInit> = {
     avax: {
         TJ_AVAX_USDC: {
-            asset: zeroAddress,
+            asset: chains.avax.protocols.traderjoe.pools.AVAX_USDC.pool,
             token0: chains.avax.tokens.wavax,
             token1: chains.avax.tokens.usdc,
             farmContract: chains.avax.protocols.traderjoe.masterChef,
             rewardsToken: chains.avax.tokens.joe,
             isFarmable: true,
-            pid: chains.avax.protocols.traderjoe.pidAVAX_USDC,
-            pool: chains.avax.protocols.traderjoe.poolAVAX_USDC,
+            pid: chains.avax.protocols.traderjoe.pools.AVAX_USDC.pid,
+            pool: chains.avax.protocols.traderjoe.pools.AVAX_USDC.pool,
             swapPaths: {
-                stablecoinToToken0: [],
+                stablecoinToToken0: [chains.avax.tokens.usdc, chains.avax.tokens.wavax],
                 stablecoinToToken1: [],
-                token0ToStablecoin: [],
+                token0ToStablecoin: [chains.avax.tokens.wavax, chains.avax.tokens.usdc],
                 token1ToStablecoin: [],
-                rewardsToToken0: [],
-                rewardsToToken1: []
+                rewardsToToken0: [chains.avax.tokens.joe, chains.avax.tokens.wavax],
+                rewardsToToken1: [chains.avax.tokens.joe, chains.avax.tokens.usdc]
             },
             priceFeeds: {
-                token0: zeroAddress,
-                token1: zeroAddress,
-                stablecoin: zeroAddress,
-                rewards: zeroAddress,
+                token0: chains.avax.priceFeeds.avax,
+                token1: chains.avax.priceFeeds.usdc,
+                stablecoin: chains.avax.priceFeeds.usdc,
+                rewards: chains.avax.priceFeeds.joe,
             },
             baseInit: {
-                treasury: zeroAddress,
-                router: zeroAddress,
-                stablecoin: zeroAddress,
-                entranceFeeFactor: 9900,
-                withdrawFeeFactor: 9900,
+                treasury: chains.avax.admin.treasury,
+                router: chains.avax.infra.uniRouterAddress,
+                stablecoin: chains.avax.tokens.usdc,
+                entranceFeeFactor: vaultFees.entranceFeeFactor,
+                withdrawFeeFactor: vaultFees.withdrawFeeFactor,
             },
         },
     },

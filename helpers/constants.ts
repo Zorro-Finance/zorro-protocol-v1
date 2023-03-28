@@ -30,10 +30,17 @@ export const chains = {
         },
         protocols: {
             traderjoe: {
-                poolAVAX_USDC: '0xf4003F4efBE8691B60249E6afbD307aBE7758adb',
-                pidAVAX_USDC: 0,
+                pools: {
+                    AVAX_USDC: {
+                        pool: '0xf4003F4efBE8691B60249E6afbD307aBE7758adb',
+                        pid: 0,
+                    },
+                },
                 masterChef: '0x4483f0b6e2F5486D06958C20f8C39A7aBe87bf8F',
             },
+        },
+        admin: {
+            treasury: zeroAddress, // TODO: Fix
         },
     },
     bnb: {
@@ -61,6 +68,9 @@ export const chains = {
                 cake: '0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82',
                 masterChef: '0xa5f8C5Dbd5F286960b9d90548680aE5ebFf07652',
             },
+        },
+        admin: {
+            treasury: zeroAddress, // TODO: Fix
         },
     },
     avaxtest: {
@@ -94,6 +104,6 @@ export const chains = {
 };
 
 export const vaultFees = {
-    entranceFeeFactor: 0,
-    withdrawFeeFactor: 0,
+    entranceFeeFactor: 9900, // 1%
+    withdrawFeeFactor: 9900, // 1%
 };

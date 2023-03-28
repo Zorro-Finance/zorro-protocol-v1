@@ -6,9 +6,9 @@ import "../interfaces/TraderJoe/IBoostedMasterChefJoe.sol";
 
 import "./_VaultAMMBase.sol";
 
-/// @title TJ_AVAX_USDC
-/// @notice Vault based on TraderJoe AVAX USDC V1 pool
-contract TJ_AVAX_USDC is VaultAMMBase {
+/// @title TraderJoeAMMV1
+/// @notice Vault based on TraderJoe V1 pool
+contract TraderJoeAMMV1 is VaultAMMBase {
     function pendingRewards()
         public
         view
