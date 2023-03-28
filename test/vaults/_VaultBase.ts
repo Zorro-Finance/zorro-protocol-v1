@@ -2,7 +2,7 @@ import { time, loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
-import {deploymentArgs} from '../../helpers/deployments';
+import {deploymentArgs} from '../../helpers/deployments/VaultAMM/TraderJoe/deployment';
 import { zeroAddress } from "../../helpers/constants";
 
 describe('VaultBase', () => {
@@ -11,7 +11,7 @@ describe('VaultBase', () => {
         const [owner, otherAccount] = await ethers.getSigners();
 
         // Get init arguments for contract deployment
-        const initArgs: any[] = deploymentArgs(owner.address).avax.VaultAMM.TJ_AVAX_USDC;
+        const initArgs: any[] = deploymentArgs('avax', 'TJ_AVAX_USDC', owner.address);
 
         // Get contract factory
         const Vault = await ethers.getContractFactory('TJ_AVAX_USDC');

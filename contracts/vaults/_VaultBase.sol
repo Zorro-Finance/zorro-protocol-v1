@@ -12,6 +12,8 @@ import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+
 import "../interfaces/Zorro/vaults/IVault.sol";
 
 import "../libraries/PriceFeed.sol";
@@ -25,6 +27,7 @@ abstract contract VaultBase is
     OwnableUpgradeable,
     PausableUpgradeable,
     ReentrancyGuardUpgradeable,
+    UUPSUpgradeable,
     IVault
 {
     /* Constants */
@@ -45,7 +48,7 @@ abstract contract VaultBase is
     function __VaultBase_init(
         VaultInit memory _initVal,
         address _timelockOwner
-    ) public virtual initializer {
+    ) public onlyInitializing {
         // Set initial values
         treasury = _initVal.treasury;
         router = _initVal.router;
@@ -56,6 +59,9 @@ abstract contract VaultBase is
 
         // Transfer ownership to the timelock controller
         _transferOwnership(_timelockOwner);
+
+        // Proxy init
+        __UUPSUpgradeable_init();
 
         // Call the ERC20 constructor to set initial values
         super.__ERC20_init("ZOR LP Vault", "ZLPV");
@@ -132,7 +138,10 @@ abstract contract VaultBase is
     /// @notice Sets price feed for a given token
     /// @param _token The token that the price feed is for
     /// @param _priceFeedAddress The address of the Chainlink compatible price feed
-    function setPriceFeed(address _token, address _priceFeedAddress) external onlyOwner {
+    function setPriceFeed(
+        address _token,
+        address _priceFeedAddress
+    ) external onlyOwner {
         _setPriceFeed(_token, _priceFeedAddress);
     }
 
@@ -144,15 +153,15 @@ abstract contract VaultBase is
     }
 
     /* Utilities */
-    
+
     /// @notice For owner to recover ERC20 tokens on this contract if stuck
     /// @dev Does not permit usage for the Zorro token
     /// @param _token ERC20 token address
     /// @param _amount token quantity
-    function inCaseTokensGetStuck(address _token, uint256 _amount)
-        public
-        onlyOwner
-    {
+    function inCaseTokensGetStuck(
+        address _token,
+        uint256 _amount
+    ) public onlyOwner {
         IERC20Upgradeable(_token).safeTransfer(_msgSender(), _amount);
     }
 
@@ -167,4 +176,8 @@ abstract contract VaultBase is
     function unpause() public virtual onlyOwner {
         _unpause();
     }
+
+    /* Proxy implementations */
+    
+    function _authorizeUpgrade(address) internal override onlyOwner {}
 }
