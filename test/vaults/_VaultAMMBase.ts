@@ -80,8 +80,26 @@ describe('VaultAMMBase', () => {
             expect(await vault.pool()).to.equal(newPool);
         });
 
-        xit('Should set farm parameters', async () => {
-            // TODO
+        it('Should set farm parameters', async () => {
+            // Prep
+            const {vault, owner} = await loadFixture(deployVaultAMMBaseFixture);
+            const newFarmContract = ethers.Wallet.createRandom().address;
+            const newRewardstoken = ethers.Wallet.createRandom().address;
+            const newPid = 1;
+
+            // Run
+            await vault.setFarmParams(
+                false,
+                newFarmContract,
+                newRewardstoken,
+                newPid
+            );
+            
+            // Test
+            expect(await vault.isFarmable()).to.equal(false);
+            expect(await vault.farmContract()).to.equal(newFarmContract);
+            expect(await vault.rewardsToken()).to.equal(newRewardstoken);
+            expect(await vault.pid()).to.equal(newPid);
         });
     });
 
@@ -107,6 +125,16 @@ describe('VaultAMMBase', () => {
 
     describe('Earnings', () => {
         xit('Compounds (reinvests) farm rewards', async () => {
+
+        });
+    });
+
+    describe('Utilities', () => {
+        xit('Should calculuate amount farmed', async () => {
+
+        });
+
+        xit('Should calculuate pending rewards farmed', async () => {
 
         });
     });

@@ -51,24 +51,72 @@ describe('VaultBase', () => {
     });
 
     describe('Setters', () => {
-        xit('Should set the treasury', async () => {
-            // TODO
+        it('Should set the treasury', async () => {
+            // Prep
+            const {vault, owner} = await loadFixture(deployVaultBaseFixture);
+            const newTreasury = ethers.Wallet.createRandom().address;
+
+            // Run
+            await vault.setTreasury(newTreasury);
+            
+            // Test
+            expect(await vault.treasury()).to.equal(newTreasury);
         });
 
-        xit('Should set fee parameters', async () => {
-            // TODO
+        it('Should set fee parameters', async () => {
+            // Prep
+            const {vault, owner} = await loadFixture(deployVaultBaseFixture);
+            const newEntranceFee = 9500;
+            const newWithdawalFee = 9700;
+
+            // Run
+            await vault.setFeeParams(newEntranceFee, newWithdawalFee);
+            
+            // Test
+            expect(await vault.entranceFeeFactor()).to.equal(newEntranceFee);
+            expect(await vault.withdrawFeeFactor()).to.equal(newWithdawalFee);
         });
 
-        xit('Should set the default slippage factor', async () => {
-            // TODO
+        it('Should set the default slippage factor', async () => {
+            // Prep
+            const {vault, owner} = await loadFixture(deployVaultBaseFixture);
+            const newSlippage = 9999;
+
+            // Run
+            await vault.setDefaultSlippageFactor(newSlippage);
+            
+            // Test
+            expect(await vault.defaultSlippageFactor()).to.equal(newSlippage);
         });
 
-        xit('Should set swap paths', async () => {
-            // TODO
+        it('Should set swap paths', async () => {
+            // Prep
+            const {vault, owner} = await loadFixture(deployVaultBaseFixture);
+            const newSwapPath = []; 
+            for (let i=0; i<2; i++) {
+                newSwapPath.push(ethers.Wallet.createRandom().address);
+
+            }
+
+            // Run
+            await vault.setSwapPaths(newSwapPath);
+            
+            // Test
+            expect(await vault.swapPaths(newSwapPath[0], newSwapPath[1], 0)).to.equal(newSwapPath[0]);
+            expect(await vault.swapPaths(newSwapPath[0], newSwapPath[1], 1)).to.equal(newSwapPath[1]);
         });
 
-        xit('Should set a price feed for a token', async () => {
-            // TODO
+        it('Should set a price feed for a token', async () => {
+            // Prep
+            const {vault, owner} = await loadFixture(deployVaultBaseFixture);
+            const dummyToken = ethers.Wallet.createRandom().address;
+            const newPriceFeed = ethers.Wallet.createRandom().address;
+
+            // Run
+            await vault.setPriceFeed(dummyToken, newPriceFeed);
+            
+            // Test
+            expect(await vault.priceFeeds(dummyToken)).to.equal(newPriceFeed);
         });
     });
 });
