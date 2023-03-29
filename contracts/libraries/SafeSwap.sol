@@ -114,6 +114,8 @@ library SafeSwapUni {
     ) internal {
         // Requirements
         require(_decimals.length == 2, "invalid dec");
+        require(_path[0] != _path[_path.length-1], "same token swap");
+
         // Calculate min amount out (account for slippage)
         uint256 _amountOut;
 

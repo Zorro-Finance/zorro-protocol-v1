@@ -16,6 +16,7 @@ async function main() {
     `Lock with ${ethers.utils.formatEther(lockedAmount)}ETH and unlock timestamp ${unlockTime} deployed to ${lock.address}`
   );
 
+  // TODO:  write csv style (append mode). Must include same hiearchy: Vault type > Chain > Protocol > Pool
   writeFile('test.txt', 'hello world', err => {
     if (err) {
       console.error(err);
@@ -31,4 +32,4 @@ main().catch((error) => {
   process.exitCode = 1;
 });
 
-// TODO: Deploy with UUPS
+// TODO: Deploy with UUPS option

@@ -12,6 +12,14 @@ const config: HardhatUserConfig = {
       },
     },
   },
+  networks: {
+    hardhat: {
+      forking: {
+        enabled: true,
+        url: 'https://api.avax.network/ext/bc/C/rpc',
+      },
+    },
+  },
 };
 
 export default config;

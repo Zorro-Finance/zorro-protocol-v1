@@ -146,27 +146,32 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
             address(this)
         );
 
-        // Swap USD* into token0, token1
-        IAMMRouter02(router).safeSwap(
-            _balUSD / 2,
-            stablecoin,
-            token0,
-            swapPaths[stablecoin][token0],
-            priceFeeds[stablecoin],
-            priceFeeds[token0],
-            _maxSlippageFactor,
-            address(this)
-        );
-        IAMMRouter02(router).safeSwap(
-            _balUSD / 2,
-            stablecoin,
-            token1,
-            swapPaths[stablecoin][token1],
-            priceFeeds[stablecoin],
-            priceFeeds[token1],
-            _maxSlippageFactor,
-            address(this)
-        );
+        // Swap USD* into token0, token1 (if applicable)
+        if (token0 != stablecoin) {
+            IAMMRouter02(router).safeSwap(
+                _balUSD / 2,
+                stablecoin,
+                token0,
+                swapPaths[stablecoin][token0],
+                priceFeeds[stablecoin],
+                priceFeeds[token0],
+                _maxSlippageFactor,
+                address(this)
+            );
+        }
+
+        if (token1 != stablecoin) {
+            IAMMRouter02(router).safeSwap(
+                _balUSD / 2,
+                stablecoin,
+                token1,
+                swapPaths[stablecoin][token1],
+                priceFeeds[stablecoin],
+                priceFeeds[token1],
+                _maxSlippageFactor,
+                address(this)
+            );
+        }
 
         // Get token balances
         uint256 _balToken0 = IERC20Upgradeable(token0).balanceOf(address(this));
@@ -238,6 +243,9 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         if (isFarmable) {
             // Get LP balance
             uint256 _balLP = IERC20Upgradeable(pool).balanceOf(address(this));
+
+            // Allow spending
+            IERC20Upgradeable(pool).safeIncreaseAllowance(farmContract, _balLP);
 
             // Deposit LP tokens into Masterchef contract
             IAMMFarm(farmContract).deposit(pid, _balLP);
@@ -408,26 +416,30 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         // Check to see if any rewards were obtained
         if (_balReward > 0) {
             // Swap to Tokens 0,1
-            IAMMRouter02(router).safeSwap(
-                _balReward / 2,
-                rewardsToken,
-                token0,
-                swapPaths[rewardsToken][token0],
-                priceFeeds[rewardsToken],
-                priceFeeds[token0],
-                _maxSlippageFactor,
-                address(this)
-            );
-            IAMMRouter02(router).safeSwap(
-                _balReward / 2,
-                rewardsToken,
-                token1,
-                swapPaths[rewardsToken][token1],
-                priceFeeds[rewardsToken],
-                priceFeeds[token1],
-                _maxSlippageFactor,
-                address(this)
-            );
+            if (rewardsToken != token0) {
+                IAMMRouter02(router).safeSwap(
+                    _balReward / 2,
+                    rewardsToken,
+                    token0,
+                    swapPaths[rewardsToken][token0],
+                    priceFeeds[rewardsToken],
+                    priceFeeds[token0],
+                    _maxSlippageFactor,
+                    address(this)
+                );
+            }
+            if (rewardsToken != token1) {
+                IAMMRouter02(router).safeSwap(
+                    _balReward / 2,
+                    rewardsToken,
+                    token1,
+                    swapPaths[rewardsToken][token1],
+                    priceFeeds[rewardsToken],
+                    priceFeeds[token1],
+                    _maxSlippageFactor,
+                    address(this)
+                );
+            }
         }
 
         // Get LP token

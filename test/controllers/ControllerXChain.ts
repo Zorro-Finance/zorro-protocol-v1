@@ -5,7 +5,7 @@ import { ethers } from "hardhat";
 
 describe('ControllerXChain', () => {
     async function deployControllerXChainFixture() {
-        // TODO
+        
     }
 
     describe('Depoloyment', () => {
