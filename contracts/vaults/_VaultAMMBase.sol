@@ -349,14 +349,13 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         // Preflight checks
         require(_shares > 0, "negShares");
 
-        // // Check if sufficient farm tokens are harvestable
-        // // TODO: Need to make this more foolproof (needs to check for swappable or exit). Try-catch is not reliable
-        // // Run earn function to harvest and reinvest
-        // try this.earn(_maxSlippageFactor) {
-        //     // TODO: Fill these
-        // } catch  {
-            
-        // }
+        /*
+        TODO: 
+        1. Need to run earn() function here
+        2. Should have a safety flag (on storage) that allows to bypass earn
+        3. Earn function should have a safety that skips if not enough reward token to swap with
+        3b. SafeSwap should have checkCanSwap() that makes sure Uni router is satisified with amountIn, amountOut, etc.
+        */
 
         // Calculate proportional amount of token to unfarm
         uint256 _removableAmount = (_shares * assetLockedTotal) /

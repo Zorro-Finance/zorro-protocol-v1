@@ -3,7 +3,7 @@ import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 import { deploymentArgs } from '../../helpers/deployments/VaultAMM/TraderJoe/deployment';
-import { zeroAddress, chains } from "../../helpers/constants";
+import { chains } from "../../helpers/constants";
 import { BigNumber } from "ethers";
 
 describe('VaultAMMBase', () => {
@@ -121,7 +121,6 @@ describe('VaultAMMBase', () => {
             await vault.setTokens(newAsset, newToken0, newToken1, newPool);
 
             // Test
-            // TODO: Change these to actual values
             expect(await vault.asset()).to.equal(newAsset);
             expect(await vault.token0()).to.equal(newToken0);
             expect(await vault.token1()).to.equal(newToken1);
