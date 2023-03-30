@@ -226,16 +226,101 @@ describe('VaultAMMBase', () => {
     });
 
     describe('Withdrawals', () => {
-        xit('Withdraws main asset token (full withdrawal)', async () => {
+        it('Withdraws main asset token (full withdrawal)', async () => {
+            // Prep
+            
+            // Get vault
+            const { vault, owner } = await loadFixture(deployVaultAMMBaseFixture);
+            
+            // Get LP Token
+            await getAssets(ethers.utils.parseEther('10'));
+            const pair = await ethers.getContractAt('IUniswapV2Pair', chains.avax.protocols.traderjoe.pools.AVAX_USDC.pool);
+            const balLP = await pair.balanceOf(owner.address);
+            const amountLP = balLP.div(10);
 
+            // Make deposit
+            await pair.approve(vault.address, amountLP);
+            await vault.deposit(amountLP);
+
+            // Run
+
+            // Make withdrawal
+            const shares = await vault.totalSupply();
+            await vault.approve(vault.address, shares);
+            await vault.withdraw(shares, 9900);
+
+            // Test
+            // TODO: Assertions
         });
 
-        xit('Withdraws main asset token twice (partial withdrawals)', async () => {
+        it('Withdraws main asset token twice (partial withdrawals)', async () => {
+            // Prep
+            
+            // Get vault
+            const { vault, owner } = await loadFixture(deployVaultAMMBaseFixture);
+            
+            // Get LP Token
+            await getAssets(ethers.utils.parseEther('10'));
+            const pair = await ethers.getContractAt('IUniswapV2Pair', chains.avax.protocols.traderjoe.pools.AVAX_USDC.pool);
+            const balLP = await pair.balanceOf(owner.address);
+            const amountLP = balLP.div(10);
 
+            // Get farm contract
+            const masterChef = await ethers.getContractAt('IBoostedMasterChefJoe', chains.avax.protocols.traderjoe.masterChef);
+
+            // Make deposit
+            await pair.approve(vault.address, amountLP);
+            await vault.deposit(amountLP);
+
+            // Run
+
+            // Make withdrawal 1
+            const shares = await vault.totalSupply();
+            await vault.approve(vault.address, shares.div(2));
+            await vault.withdraw(shares.div(2), 9900);
+
+            // Advance a few blocks and update masterchef pool rewards
+            for (let i=0; i<100; i++) {
+                await masterChef.updatePool(chains.avax.protocols.traderjoe.pools.AVAX_USDC.pid);
+            }
+
+            // Make withdrawal 2
+            console.log('one succeeded. now on to second withdrawal');
+            const sharesRemaining = await vault.totalSupply();
+            await vault.approve(vault.address, sharesRemaining);
+            await vault.withdraw(sharesRemaining, 9900);
+
+            // Test
+            // TODO: Assertions
+
+            // TODO: Assert that earnings ocurred on the second withdrawal
         });
 
-        xit('Withdraws to USD', async () => {
+        it('Withdraws to USD', async () => {
+            // Prep
+            
+            // Get vault
+            const { vault, owner } = await loadFixture(deployVaultAMMBaseFixture);
+            
+            // Get LP Token
+            await getAssets(ethers.utils.parseEther('10'));
+            const pair = await ethers.getContractAt('IUniswapV2Pair', chains.avax.protocols.traderjoe.pools.AVAX_USDC.pool);
+            const balLP = await pair.balanceOf(owner.address);
+            const amountLP = balLP.div(10);
 
+            // Make deposit
+            await pair.approve(vault.address, amountLP);
+            await vault.deposit(amountLP);
+
+            // Run
+
+            // Make withdrawal via USD
+            const shares = await vault.totalSupply();
+            await vault.approve(vault.address, shares);
+            await vault.withdrawUSD(shares, 9900);
+
+            // Test
+            // TODO: Assertions
         });
     });
 

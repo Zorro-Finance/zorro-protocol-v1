@@ -349,8 +349,14 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         // Preflight checks
         require(_shares > 0, "negShares");
 
-        // Run earn function to harvest and reinvest
-        this.earn(_maxSlippageFactor);
+        // // Check if sufficient farm tokens are harvestable
+        // // TODO: Need to make this more foolproof (needs to check for swappable or exit). Try-catch is not reliable
+        // // Run earn function to harvest and reinvest
+        // try this.earn(_maxSlippageFactor) {
+        //     // TODO: Fill these
+        // } catch  {
+            
+        // }
 
         // Calculate proportional amount of token to unfarm
         uint256 _removableAmount = (_shares * assetLockedTotal) /
@@ -364,15 +370,17 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
 
         // Collect withdrawal fee and deduct from asset balance, if applicable
         if (withdrawFeeFactor < BP_DENOMINATOR) {
-            // Modify asset amount, accounting for fee
-            amountAsset *= withdrawFeeFactor / BP_DENOMINATOR;
+            uint256 _fee = (amountAsset * (BP_DENOMINATOR - withdrawFeeFactor)) /
+                    BP_DENOMINATOR;
 
             // Collect fee
             IERC20Upgradeable(asset).safeTransfer(
                 treasury,
-                (amountAsset * (BP_DENOMINATOR - withdrawFeeFactor)) /
-                    BP_DENOMINATOR
+                _fee
             );
+
+            // Decrement amount asset
+            amountAsset -= _fee;
         }
 
         // Re-calculate asset and perform safety cap (for floating point precision)
@@ -386,6 +394,9 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
             IERC20Upgradeable(asset).safeTransfer(_destination, amountAsset);
         }
 
+        // Decrement main asset total
+        assetLockedTotal -= amountAsset;
+
         // Burn the share token
         _burn(address(this), _shares);
     }
@@ -395,6 +406,11 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
     function _unfarm(uint256 _amount) internal virtual whenNotPaused {
         // Check if farmable
         if (isFarmable) {
+            // Safety: Account for any rounding errors
+            if (_amount > this.amountFarmed()) {
+                _amount = this.amountFarmed();
+            }
+
             // Withdraw the Asset tokens from the Farm contract
             IAMMFarm(farmContract).withdraw(pid, _amount);
         }
@@ -404,7 +420,9 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
     /// @param _maxSlippageFactor The slippage tolerance (9900 = 1%)
     function earn(
         uint256 _maxSlippageFactor
-    ) public virtual nonReentrant whenNotPaused {
+    ) public virtual whenNotPaused {
+        // TODO: Consider emitting "Earn" events, for more consistent logging between vaults. Perhaps on IVault level?
+
         // Harvest
         _unfarm(0);
 
@@ -473,3 +491,6 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
     /// @return rewards The number of pending tokens
     function pendingRewards() public view virtual returns (uint256 rewards);
 }
+
+// TODO: Check where re-entrancy guards should be, protocol wide. 
+// TODO: Full audit needed
