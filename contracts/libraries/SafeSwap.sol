@@ -75,7 +75,7 @@ library SafeSwapUni {
         // Get decimals
         uint8[] memory _decimals = new uint8[](2);
         _decimals[0] = ERC20Upgradeable(_startToken).decimals();
-        _decimals[0] = ERC20Upgradeable(_endToken).decimals();
+        _decimals[1] = ERC20Upgradeable(_endToken).decimals();
 
         // Safe transfer
         IERC20Upgradeable(_startToken).safeIncreaseAllowance(address(_uniRouter), _amountIn);
@@ -137,7 +137,12 @@ library SafeSwapUni {
                 _decimals
             );
         }
-        // Swap
+
+        // Safety
+        require(_amountIn > 0, "amountIn zero");
+        require(_amountOut > 0, "amountOut zero");
+
+        // Perform swap
         _uniRouter.swapExactTokensForTokensSupportingFeeOnTransferTokens(
             _amountIn,
             _amountOut,

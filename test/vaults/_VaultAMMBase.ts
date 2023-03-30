@@ -240,18 +240,96 @@ describe('VaultAMMBase', () => {
     });
 
     describe('Earnings', () => {
-        xit('Compounds (reinvests) farm rewards', async () => {
+        it('Compounds (reinvests) farm rewards', async () => {
+            // Prep
 
+            // Get vault
+            const { vault, owner } = await loadFixture(deployVaultAMMBaseFixture);
+            
+            // Get LP Token
+            await getAssets(ethers.utils.parseEther('10'));
+            const pair = await ethers.getContractAt('IUniswapV2Pair', chains.avax.protocols.traderjoe.pools.AVAX_USDC.pool);
+            const balLP = await pair.balanceOf(owner.address);
+            const amountLP = balLP.div(10);
+
+            // Get farm contract
+            const masterChef = await ethers.getContractAt('IBoostedMasterChefJoe', chains.avax.protocols.traderjoe.masterChef);
+
+            // Run
+
+            // Deposit
+            await pair.approve(vault.address, amountLP);
+            await vault.deposit(amountLP);
+
+            // Advance blocks (need many to produce enough rewards)
+            for (let i=0; i<100; i++) {
+                await masterChef.updatePool(chains.avax.protocols.traderjoe.pools.AVAX_USDC.pid);
+            }
+
+            // Earn
+            await vault.earn(9000); // 10% slippage. WARNING: Because of low rewards after time elapsed in test, test could fail if slippage set incorrectly
+
+            // Test
+            // TODO: Assertions
         });
     });
 
     describe('Utilities', () => {
-        xit('Should calculuate amount farmed', async () => {
+        it('Should calculuate amount farmed', async () => {
+            // Prep
+            
+            // Get vault
+            const { vault, owner } = await loadFixture(deployVaultAMMBaseFixture);
+            
+            // Get LP Token
+            await getAssets(ethers.utils.parseEther('10'));
+            const pair = await ethers.getContractAt('IUniswapV2Pair', chains.avax.protocols.traderjoe.pools.AVAX_USDC.pool);
+            const balLP = await pair.balanceOf(owner.address);
+            const amountLP = balLP.div(10);
 
+            // Get farm contract
+            const masterChef = await ethers.getContractAt('IBoostedMasterChefJoe', chains.avax.protocols.traderjoe.masterChef);
+
+            // Run
+
+            // Deposit
+            await pair.approve(vault.address, amountLP);
+            await vault.deposit(amountLP);
+
+            // Advance a few blocks and update masterchef pool rewards
+            for (let i=0; i<5; i++) {
+                await masterChef.updatePool(chains.avax.protocols.traderjoe.pools.AVAX_USDC.pid);
+            }
+
+            // Test
+            expect(await vault.amountFarmed()).to.equal(amountLP);
         });
 
-        xit('Should calculuate pending rewards farmed', async () => {
+        it('Should calculuate pending rewards farmed', async () => {
+            // Prep
+            
+            // Get vault
+            const { vault, owner } = await loadFixture(deployVaultAMMBaseFixture);
 
+            // Get farm contract
+            const masterChef = await ethers.getContractAt('IBoostedMasterChefJoe', chains.avax.protocols.traderjoe.masterChef);
+            
+            // Get LP Token
+            await getAssets(ethers.utils.parseEther('10'));
+            const pair = await ethers.getContractAt('IUniswapV2Pair', chains.avax.protocols.traderjoe.pools.AVAX_USDC.pool);
+            const balLP = await pair.balanceOf(owner.address);
+            const amountLP = balLP.div(10);
+
+            // Run
+            await pair.approve(vault.address, amountLP);
+            await vault.deposit(amountLP);
+            // Advance a few blocks and update masterchef pool rewards
+            for (let i=0; i<5; i++) {
+                await masterChef.updatePool(chains.avax.protocols.traderjoe.pools.AVAX_USDC.pid);
+            }
+
+            // Test
+            expect(await vault.pendingRewards()).to.be.greaterThan(0);
         });
     });
 });
