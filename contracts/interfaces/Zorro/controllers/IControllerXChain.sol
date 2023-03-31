@@ -93,7 +93,6 @@ interface IControllerXChain is IStargateReceiver {
     /// @param _vault Address of the vault on the remote chain to deposit into
     /// @param _dstWallet Address on destination chain to send vault tokens to post-deposit
     /// @param _amountUSD The amount of USD to deposit
-    /// @param _minAmountLD Amount of output token from the swap on the remote chain (usually USD*)
     /// @param _slippageFactor Slippage tolerance for destination deposit function (9900 = 1%)
     /// @param _dstGasForCall Amount of gas to spend on the cross chain transaction
     function sendDepositRequest(
@@ -103,7 +102,6 @@ interface IControllerXChain is IStargateReceiver {
         address _vault,
         address _dstWallet,
         uint256 _amountUSD,
-        uint256 _minAmountLD,
         uint256 _slippageFactor,
         uint256 _dstGasForCall
     ) external payable;
@@ -150,7 +148,6 @@ interface IControllerXChain is IStargateReceiver {
     /// @param _shares Number of shares of the vault to withdraw
     /// @param _slippageFactor Acceptable degree of slippage on any transaction (e.g. 9500 = 5%, 9900 = 1% etc.)
     /// @param _dstWallet The address on the remote chain to send bridged funds to
-    /// @param  _minAmountLD The minimum quantity of output tokens to receive on the remote chain
     /// @param _dstGasForCall Amount of gas to spend on the cross chain transaction
     function sendWithdrawalRequest(
         uint16 _dstChain,
@@ -160,9 +157,8 @@ interface IControllerXChain is IStargateReceiver {
         uint256 _shares,
         uint256 _slippageFactor,
         address _dstWallet,
-        uint256 _minAmountLD,
         uint256 _dstGasForCall
-    ) external;
+    ) external payable;
 
     /// @notice Dummy function for receiving withdrawn funds on a remote chain
     /// @dev Necessary for type safety when matching function signatures. Actual logic is in internal _receiveWithdrawalRequest() func.

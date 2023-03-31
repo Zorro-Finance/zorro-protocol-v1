@@ -1,5 +1,5 @@
-import { chains, vaultFees, zeroAddress } from "../../../constants";
-import { ContractInitList } from "../../types";
+import { chains, vaultFees, zeroAddress } from "../../../../constants";
+import { ContractInitList } from "../../../types";
 import { VaultAMMInit } from "../types";
 
 const contractInits: ContractInitList<VaultAMMInit> = {

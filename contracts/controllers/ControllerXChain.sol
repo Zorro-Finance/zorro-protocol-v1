@@ -176,7 +176,6 @@ contract ControllerXChain is
         address _vault,
         address _dstWallet,
         uint256 _amountUSD,
-        uint256 _minAmountLD,
         uint256 _slippageFactor,
         uint256 _dstGasForCall
     ) external payable nonReentrant {
@@ -209,7 +208,7 @@ contract ControllerXChain is
             _dstChain,
             _dstPoolId,
             _balUSD,
-            _minAmountLD,
+            _balUSD * _slippageFactor / BP_DENOMINATOR,
             _remoteControllerXChain,
             _dstGasForCall,
             _payload
@@ -312,15 +311,17 @@ contract ControllerXChain is
         uint256 _shares,
         uint256 _slippageFactor,
         address _dstWallet,
-        uint256 _minAmountLD,
         uint256 _dstGasForCall
-    ) external nonReentrant {
+    ) external payable nonReentrant {
         // Safe transfer IN the vault tokens
         IERC20Upgradeable(_vault).safeTransferFrom(
             _msgSender(),
             address(this),
             _shares
         );
+
+        // Approve spending
+        IERC20Upgradeable(_vault).safeIncreaseAllowance(_vault, _shares);
 
         // Perform withdraw USD operation
         IVault(_vault).withdrawUSD(_shares, _slippageFactor);
@@ -340,7 +341,7 @@ contract ControllerXChain is
             _dstChain,
             _dstPoolId,
             _balUSD,
-            _minAmountLD,
+            _balUSD * _slippageFactor / BP_DENOMINATOR,
             _remoteControllerXChain,
             _dstGasForCall,
             _payload
