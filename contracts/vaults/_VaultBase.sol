@@ -60,6 +60,10 @@ abstract contract VaultBase is
         // Transfer ownership to the timelock controller
         _transferOwnership(_timelockOwner);
 
+        // Governor
+        gov = _timelockOwner;
+        isGov = false;
+
         // Proxy init
         __UUPSUpgradeable_init();
 
@@ -79,10 +83,21 @@ abstract contract VaultBase is
     uint256 public withdrawFeeFactor;
     uint256 public defaultSlippageFactor;
 
+    // Governor
+    address public gov;
+    bool public isGov;
+
     // Token operations
     mapping(address => mapping(address => address[])) public swapPaths; // Swap paths. Mapping: start address => end address => address array describing swap path
     mapping(address => mapping(address => uint16)) public swapPathLength; // Swap path lengths. Mapping: start address => end address => path length
     mapping(address => AggregatorV3Interface) public priceFeeds; // Price feeds. Mapping: token address => price feed address (AggregatorV3Interface implementation)
+
+    /* Modifiers */
+
+    modifier onlyAllowGov() {
+        require(_msgSender() == gov, "!gov");
+        _;
+    }
 
     /* Setters */
 
@@ -168,12 +183,12 @@ abstract contract VaultBase is
     /* Maintenance Functions */
 
     /// @notice Pause contract
-    function pause() public virtual onlyOwner {
+    function pause() public virtual onlyAllowGov {
         _pause();
     }
 
     /// @notice Unpause contract
-    function unpause() public virtual onlyOwner {
+    function unpause() public virtual onlyAllowGov {
         _unpause();
     }
 

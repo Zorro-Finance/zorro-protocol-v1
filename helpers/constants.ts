@@ -1,8 +1,5 @@
 export const zeroAddress = '0x0000000000000000000000000000000000000000';
 
-// TODO: Need to create timelock contracts here or on OZ Defender and list here in constants.
-// TODO: If using OZ Defender, make sure to use gov for bypass funcs
-
 export const chains = {
     avax: {
         xChain: {

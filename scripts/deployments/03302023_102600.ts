@@ -1,4 +1,4 @@
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 import {writeFile} from 'fs';
 
 async function main() {
