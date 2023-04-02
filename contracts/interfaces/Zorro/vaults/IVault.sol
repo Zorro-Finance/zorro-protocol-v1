@@ -11,6 +11,37 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 interface IVault is IERC20Upgradeable {
     /* Events */
 
+    event DepositAsset(
+        address indexed _pool,
+        uint256 indexed _amount,
+        uint256 indexed _sharesAdded
+    );
+
+    event DepositUSD(
+        address indexed _pool,
+        uint256 indexed _amountUSD,
+        uint256 indexed _sharesAdded,
+        uint256 _maxSlippageFactor
+    );
+
+    event WithdrawAsset(
+        address indexed _pool,
+        uint256 indexed _shares,
+        uint256 indexed _amountAssetRemoved
+    );
+
+    event WithdrawUSD(
+        address indexed _pool,
+        uint256 indexed _amountUSD,
+        uint256 indexed _sharesRemoved,
+        uint256 _maxSlippageFactor
+    );
+
+    event ReinvestEarnings(
+        uint256 indexed _amtReinvested,
+        address indexed _assetToken
+    );
+
     /* Structs */
 
     struct VaultInit {

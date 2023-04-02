@@ -8,32 +8,6 @@ import "./IVault.sol";
 /// @notice Interface for Standard AMM based vaults
 interface IVaultAMM is IVault {
     /* Events */
-    
-    event DepositAsset(
-        address indexed _pool,
-        uint256 indexed _amount,
-        uint256 indexed _sharesAdded
-    );
-
-    event DepositUSD(
-        address indexed _pool,
-        uint256 indexed _amountUSD,
-        uint256 indexed _sharesAdded,
-        uint256 _maxSlippageFactor
-    );
-
-    event WithdrawAsset(
-        address indexed _pool,
-        uint256 indexed _shares,
-        uint256 indexed _amountAssetRemoved
-    );
-
-    event WithdrawUSD(
-        address indexed _pool,
-        uint256 indexed _amountUSD,
-        uint256 indexed _sharesRemoved,
-        uint256 _maxSlippageFactor
-    );
 
     /* Structs */
 

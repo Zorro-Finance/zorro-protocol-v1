@@ -395,7 +395,7 @@ describe('VaultAMMBase', () => {
 
             // Expect last earnings block to have been updated
             const provider = ethers.getDefaultProvider();
-            expect(await vault.lastEarn()).to.be.greaterThan(0);
+            expect(await vault.lastEarn()).to.equal(await provider.getBlockNumber());
         });
     });
 

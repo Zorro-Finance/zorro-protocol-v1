@@ -414,8 +414,6 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
     function earn(
         uint256 _maxSlippageFactor
     ) public virtual whenNotPaused {
-        // TODO: Consider emitting "Earn" events, for more consistent logging between vaults. Perhaps on IVault level?
-
         // Harvest
         _unfarm(0);
 
@@ -468,8 +466,11 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         // Re-deposit LP token
         _farm();
 
-        // Update lastEarn timestamp
-        lastEarn = block.timestamp;
+        // Update lastEarn block number
+        lastEarn = block.number;
+
+        // Emit log
+        emit ReinvestEarnings(_balReward, asset);
     }
 
     /* Utilities */
