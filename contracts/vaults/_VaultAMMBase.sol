@@ -207,9 +207,6 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         // Preflight checks
         require(_amount > 0, "negdeposit");
 
-        // Increment main asset total
-        assetLockedTotal += _amount;
-
         // Set sharesAdded to the asset token amount specified
         sharesAdded = _amount;
 
@@ -229,6 +226,9 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
                 );
             }
         }
+
+        // Increment main asset total
+        assetLockedTotal += _amount;
 
         // Farm the want token if applicable.
         _farm();
@@ -367,6 +367,9 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         // Calculate actual asset unfarmed
         amountAsset = IERC20Upgradeable(asset).balanceOf(address(this));
 
+        // Decrement main asset total
+        assetLockedTotal -= amountAsset;
+
         // Collect withdrawal fee and deduct from asset balance, if applicable
         if (withdrawFeeFactor < BP_DENOMINATOR) {
             uint256 _fee = (amountAsset * (BP_DENOMINATOR - withdrawFeeFactor)) /
@@ -382,19 +385,10 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
             amountAsset -= _fee;
         }
 
-        // Re-calculate asset and perform safety cap (for floating point precision)
-        uint256 _balAsset = IERC20Upgradeable(asset).balanceOf(address(this));
-        if (amountAsset > _balAsset) {
-            amountAsset = _balAsset;
-        }
-
         // Transfer the want amount from this contract, to the specified destination (if not the current address)
         if (_destination != address(this)) {
             IERC20Upgradeable(asset).safeTransfer(_destination, amountAsset);
         }
-
-        // Decrement main asset total
-        assetLockedTotal -= amountAsset;
 
         // Burn the share token
         _burn(address(this), _shares);

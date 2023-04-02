@@ -169,15 +169,17 @@ describe('VaultAMMBase', () => {
 
             // Test
 
-            /*
-            - I expect shares to be added, proportional to the size of the pool
-            - I expect the total shares to be incremented by the above amount, accounting for fees
-            - I expect the principal debt to be incremented by the Want amount deposited
-            - I expect the want token to be farmed (and at the appropriate amount)
-            - I expect the current want equity to be correct
-            */
+            // Shares are added, proportional to the new size of the vault
+            expect(await vault.balanceOf(owner.address)).to.equal(amountLP);
 
-            // TODO: Test assertions
+            // Total supply reflects the amount of asset token added
+            expect(await vault.totalSupply()).to.equal(amountLP);
+
+            // Amount of tokens locked should equal the quantity of asset token added
+            expect(await vault.assetLockedTotal()).to.equal(amountLP);
+
+            // Asset token deposited gets farmed
+            expect(await vault.amountFarmed()).to.equal(amountLP);
         });
 
         it('Deposits asset token twice', async () => {
@@ -200,7 +202,12 @@ describe('VaultAMMBase', () => {
             await vault.deposit(amountLP);
 
             // Test
-            // TODO: Assertions
+            
+            // Total shares/supply should be the amount deposited
+            const depositFee = 9900;
+            expect(await vault.totalSupply()).to.equal(amountLP.add(amountLP.mul(depositFee).div(10000)));
+            expect(await vault.assetLockedTotal()).to.equal(amountLP.mul(2));
+            expect(await vault.amountFarmed()).to.be.closeTo(amountLP.add(amountLP.mul(depositFee).div(10000)), 10);
         });
 
         it('Deposits USD', async () => {
@@ -220,7 +227,9 @@ describe('VaultAMMBase', () => {
             await vault.depositUSD(amountUSDC, 9900);
 
             // Test
-            // TODO: Assertions
+            
+            expect(await vault.totalSupply()).to.be.greaterThan(0);
+            expect(await vault.assetLockedTotal()).to.be.greaterThan(0);
         });
     });
 
@@ -249,7 +258,15 @@ describe('VaultAMMBase', () => {
             await vault.withdraw(shares, 9900);
 
             // Test
-            // TODO: Assertions
+            
+            // Withdraws all shares
+            expect(await vault.totalSupply()).to.equal(0);
+
+            // Sets total asset locked back to zero
+            expect(await vault.assetLockedTotal()).to.equal(0);
+
+            // Asset token unfarmed
+            expect(await vault.amountFarmed()).to.equal(0);
         });
 
         it('Withdraws main asset token twice (partial withdrawals)', async () => {
@@ -261,8 +278,7 @@ describe('VaultAMMBase', () => {
             // Get LP Token
             await getAssets(ethers.utils.parseEther('10'));
             const pair = await ethers.getContractAt('IUniswapV2Pair', chains.avax.protocols.traderjoe.pools.AVAX_USDC.pool);
-            const balLP = await pair.balanceOf(owner.address);
-            const amountLP = balLP.div(10);
+            const amountLP = await pair.balanceOf(owner.address);
 
             // Get farm contract
             const masterChef = await ethers.getContractAt('IBoostedMasterChefJoe', chains.avax.protocols.traderjoe.masterChef);
@@ -278,6 +294,15 @@ describe('VaultAMMBase', () => {
             await vault.approve(vault.address, shares.div(2));
             await vault.withdraw(shares.div(2), 9900);
 
+            // Expect roughly the amount returned to equal the amount deposited minus fees
+            expect(await pair.balanceOf(owner.address)).to.be.closeTo((amountLP.div(2)).mul(99).div(100), 10);
+            
+            // Expect the shares to be decremented by the amount deposited
+            expect(await vault.totalSupply()).to.be.closeTo(amountLP.div(2), 10);
+            
+            // Expect the amount still farmed to be equal to the amount depoisted
+            expect(await vault.amountFarmed()).to.be.closeTo(amountLP.div(2), 10);
+
             // Advance a few blocks and update masterchef pool rewards
             for (let i=0; i<100; i++) {
                 await masterChef.updatePool(chains.avax.protocols.traderjoe.pools.AVAX_USDC.pid);
@@ -290,7 +315,15 @@ describe('VaultAMMBase', () => {
             await vault.withdraw(sharesRemaining, 9900);
 
             // Test
-            // TODO: Assertions
+
+            // Withdraws all shares
+            expect(await vault.totalSupply()).to.equal(0);
+
+            // Sets total asset locked back to zero
+            expect(await vault.assetLockedTotal()).to.equal(0);
+
+            // Asset token unfarmed
+            expect(await vault.amountFarmed()).to.equal(0);
 
             // TODO: Assert that earnings ocurred on the second withdrawal
         });
@@ -319,7 +352,9 @@ describe('VaultAMMBase', () => {
             await vault.withdrawUSD(shares, 9900);
 
             // Test
-            // TODO: Assertions
+            
+            expect(await vault.totalSupply()).to.equal(0);
+            expect(await vault.assetLockedTotal()).to.equal(0);
         });
     });
 
@@ -346,7 +381,7 @@ describe('VaultAMMBase', () => {
             await vault.deposit(amountLP);
 
             // Advance blocks (need many to produce enough rewards)
-            for (let i=0; i<100; i++) {
+            for (let i=0; i<500; i++) {
                 await masterChef.updatePool(chains.avax.protocols.traderjoe.pools.AVAX_USDC.pid);
             }
 
@@ -354,7 +389,13 @@ describe('VaultAMMBase', () => {
             await vault.earn(9000); // 10% slippage. WARNING: Because of low rewards after time elapsed in test, test could fail if slippage set incorrectly
 
             // Test
-            // TODO: Assertions
+            
+            // Expect asset token balance to have grown as a result of compounding
+            expect(await vault.amountFarmed()).to.be.greaterThan(amountLP);
+
+            // Expect last earnings block to have been updated
+            const provider = ethers.getDefaultProvider();
+            expect(await vault.lastEarn()).to.be.greaterThan(0);
         });
     });
 
