@@ -53,10 +53,7 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         _setPriceFeed(rewardsToken, _initVal.priceFeeds.rewards);
 
         // Call parent constructor
-        super.__VaultBase_init(
-            _initVal.baseInit,
-            _timelockOwner
-        );
+        super.__VaultBase_init(_initVal.baseInit, _timelockOwner);
     }
 
     /* State */
@@ -253,7 +250,10 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
     }
 
     /// @inheritdoc	IVaultAMM
-    function withdraw(uint256 _shares, uint256 _maxSlippageFactor) external nonReentrant {
+    function withdraw(
+        uint256 _shares,
+        uint256 _maxSlippageFactor
+    ) external nonReentrant {
         // Safe Transfer share tokens IN
         IERC20Upgradeable(address(this)).safeTransferFrom(
             _msgSender(),
@@ -262,10 +262,14 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         );
 
         // Call core withdrawal function
-        uint256 _amountWithdrawn = _withdraw(_shares, _msgSender(), _maxSlippageFactor);
+        (uint256 _amountWithdrawn, bool _didSkipEarn) = _withdraw(
+            _shares,
+            _msgSender(),
+            _maxSlippageFactor
+        );
 
         // Emit log
-        emit WithdrawAsset(pool, _shares, _amountWithdrawn);
+        emit WithdrawAsset(pool, _shares, _amountWithdrawn, _didSkipEarn);
     }
 
     /// @inheritdoc	IVault
@@ -281,7 +285,11 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         );
 
         // Call core withdrawal function
-        _withdraw(_shares, address(this), _maxSlippageFactor);
+        (uint256 _amountRemoved, bool _didSkipEarn) = _withdraw(
+            _shares,
+            address(this),
+            _maxSlippageFactor
+        );
 
         // Get balance of main asset token and reward token
         uint256 _balAsset = IERC20Upgradeable(asset).balanceOf(address(this));
@@ -333,6 +341,15 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
 
         // Transfer USD*
         IERC20Upgradeable(stablecoin).safeTransfer(_msgSender(), _balUSD);
+
+        // Emit log
+        emit WithdrawUSD(
+            pool,
+            _balUSD,
+            _shares,
+            _didSkipEarn,
+            _maxSlippageFactor
+        );
     }
 
     /// @notice Core withdrawal function
@@ -341,21 +358,22 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
     /// @param _destination Where to send withdrawn funds and rewards
     /// @param _maxSlippageFactor The slippage tolerance (9900 = 1%)
     /// @return amountAsset The quantity of main asset token removed
+    /// @return didSkipEarn Whether earn function was skipped
     function _withdraw(
         uint256 _shares,
         address _destination,
         uint256 _maxSlippageFactor
-    ) internal virtual whenNotPaused returns (uint256 amountAsset) {
+    )
+        internal
+        virtual
+        whenNotPaused
+        returns (uint256 amountAsset, bool didSkipEarn)
+    {
         // Preflight checks
         require(_shares > 0, "negShares");
 
-        /*
-        TODO: 
-        1. Need to run earn() function here
-        2. Should have a safety flag (on storage) that allows to bypass earn
-        3. Earn function should have a safety that skips if not enough reward token to swap with
-        3b. SafeSwap should have checkCanSwap() that makes sure Uni router is satisified with amountIn, amountOut, etc.
-        */
+        // Attempt to run earn()
+        didSkipEarn = this.earn(_maxSlippageFactor, true);
 
         // Calculate proportional amount of token to unfarm
         uint256 _removableAmount = (_shares * assetLockedTotal) /
@@ -372,14 +390,11 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
 
         // Collect withdrawal fee and deduct from asset balance, if applicable
         if (withdrawFeeFactor < BP_DENOMINATOR) {
-            uint256 _fee = (amountAsset * (BP_DENOMINATOR - withdrawFeeFactor)) /
-                    BP_DENOMINATOR;
+            uint256 _fee = (amountAsset *
+                (BP_DENOMINATOR - withdrawFeeFactor)) / BP_DENOMINATOR;
 
             // Collect fee
-            IERC20Upgradeable(asset).safeTransfer(
-                treasury,
-                _fee
-            );
+            IERC20Upgradeable(asset).safeTransfer(treasury, _fee);
 
             // Decrement amount asset
             amountAsset -= _fee;
@@ -411,9 +426,15 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
 
     /// @notice Harvests farm token and reinvests earnings
     /// @param _maxSlippageFactor The slippage tolerance (9900 = 1%)
+    /// @param _softFail Checks to see if swaps are possible with low rewards, and skips if not
+    /// @return didSkip Registers true if _softFail was set and the function could not complete (i.e. due to swap not being possible)
     function earn(
-        uint256 _maxSlippageFactor
-    ) public virtual whenNotPaused {
+        uint256 _maxSlippageFactor,
+        bool _softFail
+    ) public virtual whenNotPaused returns (bool didSkip) {
+        // Update rewards
+        this.updateRewards();
+
         // Harvest
         _unfarm(0);
 
@@ -421,6 +442,35 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         uint256 _balReward = IERC20Upgradeable(rewardsToken).balanceOf(
             address(this)
         );
+
+        // Check to see if swap is possible, if softFail set
+        if (_softFail) {
+            // Swaps can fail if not enough rewards have been earned since last earn block
+            // If not swappable, exit early
+
+            for (uint8 i = 0; i < 2; i++) {
+                // Determine token, and skip swap check if same as rewardToken
+                address _token = i == 0 ? token0 : token1;
+                if (_token == rewardsToken) {
+                    continue;
+                }
+
+                bool _isSwappable = IAMMRouter02(router).checkIsSwappable(
+                    _balReward,
+                    rewardsToken,
+                    _token,
+                    swapPaths[rewardsToken][_token],
+                    priceFeeds[rewardsToken],
+                    priceFeeds[_token],
+                    _maxSlippageFactor
+                );
+
+                if (!_isSwappable) {
+                    didSkip = true;
+                    return didSkip;
+                }
+            }
+        }
 
         // Check to see if any rewards were obtained
         if (_balReward > 0) {
@@ -454,6 +504,8 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         // Get LP token
         uint256 _balToken0 = IERC20Upgradeable(token0).balanceOf(address(this));
         uint256 _balToken1 = IERC20Upgradeable(token1).balanceOf(address(this));
+
+        // Join pool
         IAMMRouter02(router).joinPool(
             token0,
             token1,
@@ -481,10 +533,10 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         (farmed, ) = IAMMFarm(farmContract).userInfo(pid, address(this));
     }
 
+    /// @notice Updates the pool rewards on the farm contract
+    function updateRewards() public virtual;
+
     /// @notice Shows pending (harvestable) farm rewards
     /// @return rewards The number of pending tokens
     function pendingRewards() public view virtual returns (uint256 rewards);
 }
-
-// TODO: Check where re-entrancy guards should be, protocol wide. 
-// TODO: Full audit needed

@@ -25,4 +25,8 @@ contract TraderJoeAMMV1 is VaultAMMBase {
             address(this)
         );
     }
+
+    function updateRewards() public override {
+        IBoostedMasterChefJoe(farmContract).updatePool(pid);
+    }
 }

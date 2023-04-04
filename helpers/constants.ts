@@ -34,6 +34,7 @@ export const chains = {
             },
         },
         admin: {
+            timelockOwner: zeroAddress, // TODO: Fix
             treasury: zeroAddress, // TODO: Fix
         },
     },
@@ -64,6 +65,7 @@ export const chains = {
             },
         },
         admin: {
+            timelockOwner: zeroAddress, // TODO: Fix
             treasury: zeroAddress, // TODO: Fix
         },
     },

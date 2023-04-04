@@ -386,7 +386,9 @@ describe('VaultAMMBase', () => {
             }
 
             // Earn
-            await vault.earn(9000); // 10% slippage. WARNING: Because of low rewards after time elapsed in test, test could fail if slippage set incorrectly
+            const tx = await vault.earn(9000, false); // 10% slippage. WARNING: Because of low rewards after time elapsed in test, test could fail if slippage set incorrectly
+
+            const receipt = await tx.wait();
 
             // Test
             
@@ -396,6 +398,21 @@ describe('VaultAMMBase', () => {
             // Expect last earnings block to have been updated
             const provider = ethers.getDefaultProvider();
             expect(await vault.lastEarn()).to.equal(await provider.getBlockNumber());
+
+            // Expect log to be emitted
+
+            // Encode event logs
+            const reinvestSig = ethers.utils.id('ReinvestEarnings(uint256,address)');
+
+            // Find matching log
+            let matchingLog: any|undefined = undefined;
+            for (let log of receipt.logs) {
+                if (log.topics[0] === reinvestSig) {
+                    matchingLog = log;
+                    break;
+                }
+            }
+            expect(matchingLog).to.not.be.undefined;
         });
     });
 

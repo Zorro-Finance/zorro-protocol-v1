@@ -6,6 +6,8 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
@@ -25,7 +27,8 @@ import "../libraries/SafeSwap.sol";
 contract ControllerXChain is
     IControllerXChain,
     OwnableUpgradeable,
-    ReentrancyGuardUpgradeable
+    ReentrancyGuardUpgradeable,
+    UUPSUpgradeable
 {
     /* Constants */
 
@@ -512,4 +515,8 @@ contract ControllerXChain is
     ) public onlyOwner {
         IERC20Upgradeable(_token).safeTransfer(_msgSender(), _amount);
     }
+
+    /* Proxy implementations */
+    
+    function _authorizeUpgrade(address) internal override onlyOwner {}
 }
