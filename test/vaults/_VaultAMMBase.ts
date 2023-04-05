@@ -25,7 +25,6 @@ describe('VaultAMMBase', () => {
     async function getAssets(amountETH: BigNumber) {
         // Contracts are deployed using the first signer/account by default
         const [owner, otherAccount] = await ethers.getSigners();
-        const provider = ethers.provider;
 
         // Get LP pair
         const pair = await ethers.getContractAt('IUniswapV2Pair', chains.avax.protocols.traderjoe.pools.AVAX_USDC.pool);
@@ -206,7 +205,7 @@ describe('VaultAMMBase', () => {
             // Total shares/supply should be the amount deposited
             const depositFee = 9900;
             expect(await vault.totalSupply()).to.equal(amountLP.add(amountLP.mul(depositFee).div(10000)));
-            expect(await vault.assetLockedTotal()).to.equal(amountLP.mul(2));
+            expect(await vault.assetLockedTotal()).to.equal(amountLP.mul(2).sub(amountLP.div(100)));
             expect(await vault.amountFarmed()).to.be.closeTo(amountLP.add(amountLP.mul(depositFee).div(10000)), 10);
         });
 
@@ -281,7 +280,7 @@ describe('VaultAMMBase', () => {
             const amountLP = await pair.balanceOf(owner.address);
 
             // Get farm contract
-            const masterChef = await ethers.getContractAt('IBoostedMasterChefJoe', chains.avax.protocols.traderjoe.masterChef);
+            const masterChef = await ethers.getContractAt('IBoostedMasterChefJoe', chains.avax.protocols.traderjoe.masterChef!);
 
             // Make deposit
             await pair.approve(vault.address, amountLP);
@@ -305,11 +304,10 @@ describe('VaultAMMBase', () => {
 
             // Advance a few blocks and update masterchef pool rewards
             for (let i=0; i<100; i++) {
-                await masterChef.updatePool(chains.avax.protocols.traderjoe.pools.AVAX_USDC.pid);
+                await masterChef.updatePool(chains.avax.protocols.traderjoe.pools.AVAX_USDC.pid!);
             }
 
             // Make withdrawal 2
-            console.log('one succeeded. now on to second withdrawal');
             const sharesRemaining = await vault.totalSupply();
             await vault.approve(vault.address, sharesRemaining);
             const tx = await vault.withdraw(sharesRemaining, 9900);
@@ -386,7 +384,7 @@ describe('VaultAMMBase', () => {
             const amountLP = balLP.div(10);
 
             // Get farm contract
-            const masterChef = await ethers.getContractAt('IBoostedMasterChefJoe', chains.avax.protocols.traderjoe.masterChef);
+            const masterChef = await ethers.getContractAt('IBoostedMasterChefJoe', chains.avax.protocols.traderjoe.masterChef!);
 
             // Run
 
@@ -396,7 +394,7 @@ describe('VaultAMMBase', () => {
 
             // Advance blocks (need many to produce enough rewards)
             for (let i=0; i<500; i++) {
-                await masterChef.updatePool(chains.avax.protocols.traderjoe.pools.AVAX_USDC.pid);
+                await masterChef.updatePool(chains.avax.protocols.traderjoe.pools.AVAX_USDC.pid!);
             }
 
             // Earn
@@ -410,8 +408,7 @@ describe('VaultAMMBase', () => {
             expect(await vault.amountFarmed()).to.be.greaterThan(amountLP);
 
             // Expect last earnings block to have been updated
-            const provider = ethers.getDefaultProvider();
-            expect(await vault.lastEarn()).to.equal(await provider.getBlockNumber());
+            expect(await vault.lastEarn()).to.equal(await ethers.provider.getBlockNumber());
 
             // Expect log to be emitted
 
@@ -444,7 +441,7 @@ describe('VaultAMMBase', () => {
             const amountLP = balLP.div(10);
 
             // Get farm contract
-            const masterChef = await ethers.getContractAt('IBoostedMasterChefJoe', chains.avax.protocols.traderjoe.masterChef);
+            const masterChef = await ethers.getContractAt('IBoostedMasterChefJoe', chains.avax.protocols.traderjoe.masterChef!);
 
             // Run
 
@@ -454,7 +451,7 @@ describe('VaultAMMBase', () => {
 
             // Advance a few blocks and update masterchef pool rewards
             for (let i=0; i<5; i++) {
-                await masterChef.updatePool(chains.avax.protocols.traderjoe.pools.AVAX_USDC.pid);
+                await masterChef.updatePool(chains.avax.protocols.traderjoe.pools.AVAX_USDC.pid!);
             }
 
             // Test
@@ -468,7 +465,7 @@ describe('VaultAMMBase', () => {
             const { vault, owner } = await loadFixture(deployVaultAMMBaseFixture);
 
             // Get farm contract
-            const masterChef = await ethers.getContractAt('IBoostedMasterChefJoe', chains.avax.protocols.traderjoe.masterChef);
+            const masterChef = await ethers.getContractAt('IBoostedMasterChefJoe', chains.avax.protocols.traderjoe.masterChef!);
             
             // Get LP Token
             await getAssets(ethers.utils.parseEther('10'));
@@ -481,7 +478,7 @@ describe('VaultAMMBase', () => {
             await vault.deposit(amountLP);
             // Advance a few blocks and update masterchef pool rewards
             for (let i=0; i<5; i++) {
-                await masterChef.updatePool(chains.avax.protocols.traderjoe.pools.AVAX_USDC.pid);
+                await masterChef.updatePool(chains.avax.protocols.traderjoe.pools.AVAX_USDC.pid!);
             }
 
             // Test

@@ -224,11 +224,14 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
             }
         }
 
-        // Increment main asset total
-        assetLockedTotal += _amount;
 
-        // Farm the want token if applicable.
-        _farm();
+        if (isFarmable) {
+            // Farm the want token if applicable.
+            _farm();
+        } else {
+            // Otherewise, simply increment main asset total
+            assetLockedTotal += _amount;
+        }
 
         // Mint ERC20 token proportional to share, and send to msg.sender
         _mint(_msgSender(), sharesAdded);
@@ -236,17 +239,17 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
 
     /// @notice Internal function for farming Want token. Responsible for staking Want token in a MasterChef/MasterApe-like contract
     function _farm() internal virtual whenNotPaused {
-        // Check if farmable
-        if (isFarmable) {
-            // Get LP balance
-            uint256 _balLP = IERC20Upgradeable(pool).balanceOf(address(this));
+        // Get LP balance
+        uint256 _balLP = IERC20Upgradeable(pool).balanceOf(address(this));
 
-            // Allow spending
-            IERC20Upgradeable(pool).safeIncreaseAllowance(farmContract, _balLP);
+        // Increment asset locked total by additional LP tokens earned/deposited onto this contract
+        assetLockedTotal += _balLP;
 
-            // Deposit LP tokens into Masterchef contract
-            IAMMFarm(farmContract).deposit(pid, _balLP);
-        }
+        // Allow spending
+        IERC20Upgradeable(pool).safeIncreaseAllowance(farmContract, _balLP);
+
+        // Deposit LP tokens into Masterchef contract
+        IAMMFarm(farmContract).deposit(pid, _balLP);
     }
 
     /// @inheritdoc	IVaultAMM
@@ -285,7 +288,7 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         );
 
         // Call core withdrawal function
-        (uint256 _amountRemoved, bool _didSkipEarn) = _withdraw(
+        (, bool _didSkipEarn) = _withdraw(
             _shares,
             address(this),
             _maxSlippageFactor

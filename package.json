@@ -31,7 +31,8 @@
     "@openzeppelin/hardhat-upgrades": "^1.22.1"
   },
   "scripts": {
-    "test": "mocha"
+    "test": "npx hardhat test",
+    "console": "npx hardhat console"
   },
   "author": "Zorro",
   "license": "ISC"
