@@ -1,6 +1,8 @@
+import { ChainList } from "./types";
+
 export const zeroAddress = '0x0000000000000000000000000000000000000000';
 
-export const chains = {
+export const chains: ChainList = {
     avax: {
         xChain: {
             lzChainId: 106,
@@ -60,7 +62,7 @@ export const chains = {
         },
         protocols: {
             pancakeswap: {
-                cake: '0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82',
+                pools: {},
                 masterChef: '0xa5f8C5Dbd5F286960b9d90548680aE5ebFf07652',
             },
         },
@@ -77,10 +79,17 @@ export const chains = {
         tokens: {
             usdc: '0x4A0D1092E9df255cf95D72834Ea9255132782318',
         },
+        priceFeeds: {},
         infra: {
             layerZeroEndpoint: '0x93f54D755A063cE7bB9e6Ac47Eccc8e33411d706',
             stargateRouter: '0x13093E05Eb890dfA6DacecBdE51d24DabAb2Faa1',
+            uniFactoryAddress: zeroAddress,
             uniRouterAddress: zeroAddress,
+        },
+        protocols: {},
+        admin: {
+            timelockOwner: zeroAddress,
+            treasury: zeroAddress,
         },
     },
     bnbtest: {
@@ -91,10 +100,17 @@ export const chains = {
         tokens: {
             busd: '0x1010Bb1b9Dff29e6233E7947e045e0ba58f6E92e',
         },
+        priceFeeds: {},
         infra: {
             layerZeroEndpoint: '0x6Fcb97553D41516Cb228ac03FdC8B9a0a9df04A1',
             stargateRouter: '0xbB0f1be1E9CE9cB27EA5b0c3a85B7cc3381d8176',
+            uniFactoryAddress: zeroAddress,
             uniRouterAddress: zeroAddress,
+        },
+        protocols: {},
+        admin: {
+            timelockOwner: zeroAddress,
+            treasury: zeroAddress,
         },
     },
 };

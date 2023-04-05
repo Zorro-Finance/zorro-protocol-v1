@@ -2,8 +2,13 @@ import { ethers, upgrades } from "hardhat";
 import {deploymentArgs} from '../../helpers/deployments/vaults/VaultAMM/TraderJoe/deployment';
 import { recordVaultDeployment } from "../../helpers/deployments/utilities";
 import { basename } from "path";
+import hre from 'hardhat';
+import { chains } from "../../helpers/constants";
 
 async function main() {
+  // Init
+  const network = hre.network.name;
+
   // Deploy initial AMM vaults
   const vaultContractClass = 'TraderJoeAMMV1'
   const pool = 'TJ_AVAX_USDC';
@@ -11,7 +16,7 @@ async function main() {
   const Vault = await ethers.getContractFactory(vaultContractClass);
   const vault = await upgrades.deployProxy(
     Vault,
-    deploymentArgs(network, pool, timelockOwner),
+    deploymentArgs(network, pool, chains[network].admin.timelockOwner),
     {
       kind: 'uups',
     }
