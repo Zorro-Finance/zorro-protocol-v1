@@ -312,7 +312,8 @@ describe('VaultAMMBase', () => {
             console.log('one succeeded. now on to second withdrawal');
             const sharesRemaining = await vault.totalSupply();
             await vault.approve(vault.address, sharesRemaining);
-            await vault.withdraw(sharesRemaining, 9900);
+            const tx = await vault.withdraw(sharesRemaining, 9900);
+            const receipt = await tx.wait();
 
             // Test
 
@@ -325,7 +326,20 @@ describe('VaultAMMBase', () => {
             // Asset token unfarmed
             expect(await vault.amountFarmed()).to.equal(0);
 
-            // TODO: Assert that earnings ocurred on the second withdrawal
+            // Encode event logs
+            const reinvestSig = ethers.utils.id('ReinvestEarnings(uint256,address)');
+            
+            // Find matching log
+            let matchingLog: any|undefined = undefined;
+            for (let log of receipt.logs) {
+                if (log.topics[0] === reinvestSig) {
+                    matchingLog = log;
+                    break;
+                }
+            }
+            
+            // Assert that earnings ocurred on the second withdrawal
+            expect(matchingLog).to.not.be.undefined;
         });
 
         it('Withdraws to USD', async () => {

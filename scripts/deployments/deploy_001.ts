@@ -1,6 +1,7 @@
 import { ethers, upgrades } from "hardhat";
 import {deploymentArgs} from '../../helpers/deployments/controllers/ControllerXChain/deployment';
 import { recordDeployment } from "../../helpers/deployments/utilities";
+import {basename} from 'path';
 
 async function main() {
   // Deploy XChain controller
@@ -23,7 +24,8 @@ async function main() {
   recordDeployment(
     controllerName,
     network,
-    controller.address
+    controller.address,
+    basename(__filename)
   );
 }
 

@@ -1,6 +1,7 @@
 import { ethers, upgrades } from "hardhat";
 import {deploymentArgs} from '../../helpers/deployments/vaults/VaultAMM/TraderJoe/deployment';
 import { recordVaultDeployment } from "../../helpers/deployments/utilities";
+import { basename } from "path";
 
 async function main() {
   // Deploy initial AMM vaults
@@ -27,7 +28,8 @@ async function main() {
     network,
     protocol,
     pool,
-    vault.address
+    vault.address,
+    basename(__filename)
   );
 }
 
