@@ -61,6 +61,7 @@ abstract contract VaultBase is
         _transferOwnership(_timelockOwner);
 
         // Governor
+        // TODO: Gov should be a multisig with 1/2 uses required, NOT timelock
         gov = _timelockOwner;
         isGov = false;
 
