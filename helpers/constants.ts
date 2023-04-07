@@ -6,7 +6,7 @@ export const chains: ChainList = {
     avax: {
         xChain: {
             lzChainId: 106,
-            sgPoolId: 1,
+            sgPoolId: 1, // USDC
         },
         tokens: {
             wavax: '0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7',
@@ -36,14 +36,53 @@ export const chains: ChainList = {
             },
         },
         admin: {
-            timelockOwner: zeroAddress, // TODO: Fix
-            treasury: zeroAddress, // TODO: Fix
+            timelockOwner: '0xb7f176e376B883816BA5C63077b6b2E5579538ae',
+            multiSigOwner: '0x0426B99e80783CB9b7C0741C9c9E1d0FAb3f80e7',
+        },
+    },
+    polygon: {
+        xChain: {
+            lzChainId: 109,
+            sgPoolId: 1, // USDC
+        },
+        tokens: {
+            wmatic: '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270',
+            usdc: '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174',
+            weth: '0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619',
+            sushi: '0x0b3F868E0BE5597D5DB7fEB59E1CADBb0fdDa50a',
+        },
+        priceFeeds: {
+            usdc: '0xfE4A8cc5b5B2366C1B58Bea3858e81843581b2F7',
+            matic: '0xAB594600376Ec9fD91F8e885dADF0CE036862dE0',
+            sushi: '0x49B0c695039243BBfEb8EcD054EB70061fd54aa0',
+            eth: '0xF9680D99D6C9589e2a93a78A04A279e509205945',
+        },
+        infra: {
+            uniRouterAddress: '0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506',
+            uniFactoryAddress: '0xc35DADB65012eC5796536bD9864eD8773aBc74C4',
+            stargateRouter: '0x45A01E4e04F14f7A4a6702c74187c5F6222033cd',
+            layerZeroEndpoint: '0x3c2269811836af69497E5F486A85D7316753cf62',
+        },
+        protocols: {
+            sushiswap: {
+                pools: {
+                    WMATIC_WETH: {
+                        pool: '0xc4e595acdd7d12fec385e5da5d43160e8a0bac0e',
+                        pid: 0,
+                    },
+                },
+                masterChef: '0x0769fd68dFb93167989C6f7254cd0D766Fb2841F',
+            },
+        },
+        admin: {
+            timelockOwner: '0xa1Ea1421f9945CcB583eE7083AF6F76503415577',
+            multiSigOwner: '0x1cE192d20ccD646d8fF9a47D2C4A364bBD1bea1a',
         },
     },
     bnb: {
         xChain: {
             lzChainId: 102,
-            sgPoolId: 5,
+            sgPoolId: 5, // BUSD
         },
         tokens: {
             wbnb: '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c',
@@ -68,7 +107,7 @@ export const chains: ChainList = {
         },
         admin: {
             timelockOwner: zeroAddress, // TODO: Fix
-            treasury: zeroAddress, // TODO: Fix
+            multiSigOwner: zeroAddress, // TODO: Fix
         },
     },
     avaxtest: {
@@ -89,7 +128,7 @@ export const chains: ChainList = {
         protocols: {},
         admin: {
             timelockOwner: zeroAddress,
-            treasury: zeroAddress,
+            multiSigOwner: zeroAddress,
         },
     },
     bnbtest: {
@@ -110,7 +149,7 @@ export const chains: ChainList = {
         protocols: {},
         admin: {
             timelockOwner: zeroAddress,
-            treasury: zeroAddress,
+            multiSigOwner: zeroAddress,
         },
     },
 };

@@ -38,7 +38,7 @@ interface ProtocolConfigList {
 
 interface AdminConfig {
     timelockOwner: string;
-    treasury: string;
+    multiSigOwner: string;
 }
 
 interface ChainConfig {
