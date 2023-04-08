@@ -1,7 +1,8 @@
 import {deploymentArgs} from '../../helpers/deployments/vaults/VaultAMM/Sushiswap/deployment';
 import { deployAMMVault } from "../../helpers/deployments/utilities";
-import hre from 'hardhat';
 import { chains } from "../../helpers/constants";
+import { basename } from 'path';
+import hre from 'hardhat';
 
 async function main() {
   // Init
@@ -14,7 +15,7 @@ async function main() {
   
   // Deploy initial AMM vaults
   const vaultContractClass = 'SushiSwapAMM'
-  const pool = 'WMATIC_WETH';
+  const pool = 'SUSHI_WMATIC_WETH';
   const protocol = 'sushiswap';
 
   await deployAMMVault(
@@ -22,7 +23,8 @@ async function main() {
     pool,
     protocol,
     network,
-    deploymentArgs(network, pool, chains[network].admin.timelockOwner, chains[network].admin.multiSigOwner)
+    deploymentArgs(network, pool, chains[network].admin.timelockOwner, chains[network].admin.multiSigOwner),
+    basename(__filename)
   );
 }
 

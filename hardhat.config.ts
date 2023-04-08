@@ -3,6 +3,7 @@ import "@nomicfoundation/hardhat-toolbox";
 import "@openzeppelin/hardhat-upgrades";
 import "@nomiclabs/hardhat-etherscan";
 import * as dotenv from 'dotenv';
+import "hardhat-gas-reporter"
 
 // Preload environment
 dotenv.config({path:__dirname + '/.env'});
@@ -22,16 +23,16 @@ const config: HardhatUserConfig = {
     hardhat: {
       forking: {
         enabled: true,
-        url: 'https://api.avax.network/ext/bc/C/rpc',
+        url: 'https://api.avax.network/ext/bc/C/rpc'
       },
     },
     avax: {
-      url: 'https://avalanche-mainnet.infura.io',
+      url: 'https://api.avax.network/ext/bc/C/rpc',
       chainId: 43114,
       accounts: [process.env.DEPLOYER_PRIVATE_KEY!]
     },
     polygon: {
-      url: 'https://polygon-mainnet.infura.io',
+      url: 'https://polygon-rpc.com',
       chainId: 137,
       accounts: [process.env.DEPLOYER_PRIVATE_KEY!]
     },

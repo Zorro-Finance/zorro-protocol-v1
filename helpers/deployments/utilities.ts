@@ -1,6 +1,5 @@
 import {appendFile, existsSync} from 'fs';
 import { ethers, upgrades } from 'hardhat';
-import { basename } from "path";
 
 const getISODateTime = (): string => {
     return (new Date()).toISOString();
@@ -14,8 +13,8 @@ export const recordVaultDeployment = (
     deploymentAddress: string,
     source: string 
 ) => {
-    const data = `${vaultContractClass},${network},${protocol},${pool},${deploymentAddress},${source},${getISODateTime()}`;
-    const headers = 'vault_contract_class,network,protocol,pool,deployment_address,source,date';
+    const data = `${vaultContractClass},${network},${protocol},${pool},${deploymentAddress},${source},${getISODateTime()}\n`;
+    const headers = 'vault_contract_class,network,protocol,pool,deployment_address,source,date\n';
     const path = 'deployments/vaults.lock';
     if (!existsSync(path)) {
         // Add header row
@@ -42,8 +41,8 @@ export const recordDeployment = (
     deploymentAddress: string,
     source: string 
 ) => {
-    const data = `${contractClass},${network},${deploymentAddress},${source},${getISODateTime()}`;
-    const headers = 'contract_class,network,deployment_address,source,date';
+    const data = `${contractClass},${network},${deploymentAddress},${source},${getISODateTime()}\n`;
+    const headers = 'contract_class,network,deployment_address,source,date\n';
     const path = 'deployments/contracts.lock';
     if (!existsSync(path)) {
         // Add header row
@@ -66,7 +65,8 @@ export const deployAMMVault = async (
     pool: string,
     protocol: string,
     network: string,
-    deploymentArgs: any[]
+    deploymentArgs: any[],
+    source: string
 ) => {
       // Deploy initial AMM vaults
   const Vault = await ethers.getContractFactory(vaultContractClass);
@@ -90,6 +90,6 @@ export const deployAMMVault = async (
     protocol,
     pool,
     vault.address,
-    basename(__filename)
+    source
   );
 };

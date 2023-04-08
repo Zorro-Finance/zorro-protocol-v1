@@ -121,8 +121,7 @@ yarn compile
 For tests, run:
 
 ```shell
-npx hardhat test
-# or `yarn test`
+REPORT_GAS=true npx hardhat test
 # optionally specify --network <network name>
 ```
 
@@ -138,7 +137,7 @@ npx hardhat console
 # Deploy/migrate
 
 ```shell
-REPORT_GAS=true npx hardhat run scripts/deployments/deploy_001.ts
+npx hardhat run --network avax scripts/deployments/deploy_001.ts
 ```
 
 All deployments log information/history to _deployments/contracts.lock_ to keep a record of deployments.

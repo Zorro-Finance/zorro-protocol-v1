@@ -2,6 +2,7 @@ import { deploymentArgs } from '../../helpers/deployments/vaults/VaultAMM/Trader
 import { deployAMMVault } from "../../helpers/deployments/utilities";
 import hre from 'hardhat';
 import { chains } from "../../helpers/constants";
+import { basename } from 'path';
 
 async function main() {
   // Init
@@ -22,7 +23,8 @@ async function main() {
     pool,
     protocol,
     network,
-    deploymentArgs(network, pool, chains[network].admin.timelockOwner, chains[network].admin.multiSigOwner)
+    deploymentArgs(network, pool, chains[network].admin.timelockOwner, chains[network].admin.multiSigOwner),
+    basename(__filename)
   );
 }
 
