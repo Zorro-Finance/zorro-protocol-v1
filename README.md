@@ -6,7 +6,9 @@ Next-gen cross-chain yield aggregation.
 The Zorro protcol is a true cross-chain yield aggregator that allows one to take advantage of yield farming opportunities cross-chain without ever leaving your home chain, and features dynamic, market adjusted tokenomics to maximize returns to investors. 
 
 **Website:** https://zorro.finance
+
 **App:** https://app.zorro.finance (Coming soon)
+
 **Docs:** Gitbook (Coming soon)
 
 # Tech stack
@@ -52,7 +54,7 @@ We follow standard file organization conventions as used by Hardhat and common S
 
 # File organization
 
-```
+```bash
 .openzeppelin # Proxy contract mapping for upgradeable contracts
 artifacts # Hardhat artifacts
 cache # Hardhat cache
@@ -147,7 +149,7 @@ All deployments log information/history to _deployments/contracts.lock_ to keep 
 !! As of writing, deployment files do NOT have any idempotency protection, so please do not re-run migrations
 unless you really know what you're doing.
 
-Chose not to use (hardhat-deploy)[https://github.com/wighawag/hardhat-deploy/tree/master] to keep things simpler 
+We chose not to use [hardhat-deploy](https://github.com/wighawag/hardhat-deploy/tree/master) to keep things simpler 
 and to have more control.
 
 # Upgradeability
