@@ -45,9 +45,11 @@ abstract contract VaultBase is
     /// @notice Upgradeable constructor
     /// @param _initVal A VaultInit struct
     /// @param _timelockOwner The owner address (timelock)
+    /// @param _gov The governor address for non timelock admin functions
     function __VaultBase_init(
         VaultInit memory _initVal,
-        address _timelockOwner
+        address _timelockOwner,
+        address _gov
     ) public onlyInitializing {
         // Set initial values
         treasury = _initVal.treasury;
@@ -61,9 +63,7 @@ abstract contract VaultBase is
         _transferOwnership(_timelockOwner);
 
         // Governor
-        // TODO: Gov should be a multisig with 1/2 uses required, NOT timelock
-        gov = _timelockOwner;
-        isGov = false;
+        gov = _gov;
 
         // Proxy init
         __UUPSUpgradeable_init();
@@ -86,7 +86,6 @@ abstract contract VaultBase is
 
     // Governor
     address public gov;
-    bool public isGov;
 
     // Token operations
     mapping(address => mapping(address => address[])) public swapPaths; // Swap paths. Mapping: start address => end address => address array describing swap path
@@ -166,6 +165,12 @@ abstract contract VaultBase is
     /// @param _priceFeedAddress The address of the Chainlink compatible price feed
     function _setPriceFeed(address _token, address _priceFeedAddress) internal {
         priceFeeds[_token] = AggregatorV3Interface(_priceFeedAddress);
+    }
+
+    /// @notice Sets governor address
+    /// @param _gov The address for the governor
+    function setGov(address _gov) external onlyOwner {
+        gov = _gov;
     }
 
     /* Utilities */

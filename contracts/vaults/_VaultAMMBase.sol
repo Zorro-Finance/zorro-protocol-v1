@@ -24,9 +24,11 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
     /// @notice Upgradeable constructor
     /// @param _initVal A VaultAMMInit struct
     /// @param _timelockOwner The owner address (timelock)
+    /// @param _gov The governor address for non timelock admin functions
     function initialize(
         VaultAMMInit memory _initVal,
-        address _timelockOwner
+        address _timelockOwner,
+        address _gov
     ) public initializer {
         // Set contract config
         asset = _initVal.asset;
@@ -53,7 +55,7 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         _setPriceFeed(rewardsToken, _initVal.priceFeeds.rewards);
 
         // Call parent constructor
-        super.__VaultBase_init(_initVal.baseInit, _timelockOwner);
+        super.__VaultBase_init(_initVal.baseInit, _timelockOwner, _gov);
     }
 
     /* State */

@@ -2,6 +2,11 @@ import { ChainList } from "./types";
 
 export const zeroAddress = '0x0000000000000000000000000000000000000000';
 
+export const team = [
+    '0x128aDe0F1C8E0DaaDB4c2CF2b071b305122955F7',
+    '0xb1711a188052B00fCaF19a650e69E6856a44bE77',
+];
+
 export const chains: ChainList = {
     avax: {
         xChain: {
@@ -106,8 +111,8 @@ export const chains: ChainList = {
             },
         },
         admin: {
-            timelockOwner: zeroAddress, // TODO: Fix
-            multiSigOwner: zeroAddress, // TODO: Fix
+            timelockOwner: zeroAddress, // TODO: Add in when starting BNB chain
+            multiSigOwner: zeroAddress, // TODO: Add in when starting BNB chain
         },
     },
     avaxtest: {

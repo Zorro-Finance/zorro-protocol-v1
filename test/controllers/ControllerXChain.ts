@@ -28,7 +28,7 @@ describe('ControllerXChain', () => {
         const [owner, otherAccount] = await ethers.getSigners();
 
         // Get init arguments for contract deployment
-        const initArgs: any[] = deploymentArgsVault('avax', 'TJ_AVAX_USDC', owner.address);
+        const initArgs: any[] = deploymentArgsVault('avax', 'TJ_AVAX_USDC', owner.address, owner.address);
 
         // Get contract factory
         const Vault = await ethers.getContractFactory('TraderJoeAMMV1');

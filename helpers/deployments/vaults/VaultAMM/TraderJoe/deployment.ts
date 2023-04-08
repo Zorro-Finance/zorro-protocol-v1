@@ -8,10 +8,10 @@ const contractInits: ContractInitList<VaultAMMInit> = {
             asset: chains.avax.protocols.traderjoe.pools.AVAX_USDC.pool,
             token0: chains.avax.tokens.wavax,
             token1: chains.avax.tokens.usdc,
-            farmContract: chains.avax.protocols.traderjoe.masterChef,
+            farmContract: chains.avax.protocols.traderjoe.masterChef!,
             rewardsToken: chains.avax.tokens.joe,
             isFarmable: true,
-            pid: chains.avax.protocols.traderjoe.pools.AVAX_USDC.pid,
+            pid: chains.avax.protocols.traderjoe.pools.AVAX_USDC.pid!,
             pool: chains.avax.protocols.traderjoe.pools.AVAX_USDC.pool,
             swapPaths: {
                 stablecoinToToken0: [chains.avax.tokens.usdc, chains.avax.tokens.wavax],
@@ -28,7 +28,7 @@ const contractInits: ContractInitList<VaultAMMInit> = {
                 rewards: chains.avax.priceFeeds.joe,
             },
             baseInit: {
-                treasury: chains.avax.admin.treasury,
+                treasury: chains.avax.admin.multiSigOwner,
                 router: chains.avax.infra.uniRouterAddress,
                 stablecoin: chains.avax.tokens.usdc,
                 entranceFeeFactor: vaultFees.entranceFeeFactor,
@@ -38,9 +38,10 @@ const contractInits: ContractInitList<VaultAMMInit> = {
     },
 };
 
-export const deploymentArgs = (chain: string, pool: string, timelockOwner: string) => {
+export const deploymentArgs = (chain: string, pool: string, timelockOwner: string, gov: string) => {
     return [
         contractInits[chain][pool],
         timelockOwner,
+        gov
     ];
 };

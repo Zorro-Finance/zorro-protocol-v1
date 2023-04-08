@@ -1,4 +1,6 @@
 import {appendFile, existsSync} from 'fs';
+import { ethers, upgrades } from 'hardhat';
+import { basename } from "path";
 
 const getISODateTime = (): string => {
     return (new Date()).toISOString();
@@ -57,4 +59,37 @@ export const recordDeployment = (
             console.error(err);
         }
     });
+};
+
+export const deployAMMVault = async (
+    vaultContractClass: string,
+    pool: string,
+    protocol: string,
+    network: string,
+    deploymentArgs: any[]
+) => {
+      // Deploy initial AMM vaults
+  const Vault = await ethers.getContractFactory(vaultContractClass);
+  const vault = await upgrades.deployProxy(
+    Vault,
+    deploymentArgs,
+    {
+      kind: 'uups',
+    }
+  );
+
+  // Log 
+  console.log(
+    `${vaultContractClass}::${pool} deployed to ${vault.address}`
+  );
+
+  // Record the contract deployment in a lock file
+  recordVaultDeployment(
+    vaultContractClass,
+    network,
+    protocol,
+    pool,
+    vault.address,
+    basename(__filename)
+  );
 };

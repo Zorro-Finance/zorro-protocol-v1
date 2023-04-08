@@ -86,6 +86,12 @@ interface IVault is IERC20Upgradeable {
     /// @return The slippage factor numerator
     function defaultSlippageFactor() external view returns (uint256);
 
+    // Governor
+
+    /// @notice Governor address for non timelock admin operations
+    /// @return The address of the governor
+    function gov() external view returns (address);
+
     // Cash flow operations
 
     /// @notice Converts USD* to main asset and deposits it

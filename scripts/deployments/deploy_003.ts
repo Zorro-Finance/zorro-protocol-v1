@@ -1,4 +1,4 @@
-import { deploymentArgs } from '../../helpers/deployments/vaults/VaultAMM/TraderJoe/deployment';
+import {deploymentArgs} from '../../helpers/deployments/vaults/VaultAMM/Sushiswap/deployment';
 import { deployAMMVault } from "../../helpers/deployments/utilities";
 import hre from 'hardhat';
 import { chains } from "../../helpers/constants";
@@ -8,14 +8,14 @@ async function main() {
   const network = hre.network.name;
 
   // Network check
-  if (network !== 'avax') {
+  if (network !== 'polygon') {
     return;
   }
-
+  
   // Deploy initial AMM vaults
-  const vaultContractClass = 'TraderJoeAMMV1'
-  const pool = 'TJ_AVAX_USDC';
-  const protocol = 'traderjoe';
+  const vaultContractClass = 'SushiSwapAMM'
+  const pool = 'WMATIC_WETH';
+  const protocol = 'sushiswap';
 
   await deployAMMVault(
     vaultContractClass,
