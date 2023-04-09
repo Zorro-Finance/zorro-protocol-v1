@@ -29,22 +29,25 @@ _NOTE: Addresses coming soon, and will be updated below once contracts are deplo
 
 ## Avalanche (AVAX)
 
-* Zorro token: `0x0`
-* Controller contract: `0x0`
-* Zorro staking vault contract: `0x0`
-* Public pool: `0x0`
-* Treasury pool: `0x0`
+| Contract                   | Address (Proxy)                            |
+|----------------------------|--------------------------------------------|
+| ControllerXChain           | 0x144B0148b7613D73FE620c1614e7a6af785a9c61 |
+| TraderJoeAMMV1 (AVAX-USDC) | 0xd5d9DD5837Fc1ACEBEC207BB5D75858859eadfD0 |
+| Treasury                   | 0x0426B99e80783CB9b7C0741C9c9E1d0FAb3f80e7 |
+| Timelock                   | 0xb7f176e376B883816BA5C63077b6b2E5579538ae |
 
-## Binance Smart Chain (BSC)
+## Polygon (Matic)
 
-* Zorro token: `0x0`
-* Controller contract: `0x0`
-* Zorro staking vault contract: `0x0`
-* Treasury pool: `0x0`
+| Contract                  | Address (Proxy)                            |
+|---------------------------|--------------------------------------------|
+| ControllerXChain          | 0xbaa62418679F1433D337414a3144f57908913567 |
+| SushiSwapAMM (MATIC-WETH) | 0x52a236d6a45984e81340fEa984890B2f83ab659F |
+| Treasury                  | 0x1cE192d20ccD646d8fF9a47D2C4A364bBD1bea1a |
+| Timelock                  | 0xa1Ea1421f9945CcB583eE7083AF6F76503415577 |
 
 ## Coming soon
 
-* Polygon (Matic)
+* BNB Chain (BSC)
 * Fantom
 * Solana
 
