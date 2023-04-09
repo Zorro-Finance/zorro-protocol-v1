@@ -12,7 +12,7 @@ async function main() {
   const network = hre.network.name as PublicNetwork;
 
   // Deploy XChain controller
-  const controllerName = 'ControllerXChain'
+  const controllerName = 'ControllerXChain';
   const Controller = await ethers.getContractFactory(controllerName);
   const controller = await upgrades.deployProxy(
     Controller,
@@ -21,6 +21,9 @@ async function main() {
       kind: 'uups',
     }
   );
+
+  // Block until deployed
+  await controller.deployed();
 
   // Verify contract and send to Etherscan
   await verifyContract(await upgrades.erc1967.getImplementationAddress(controller.address), []);

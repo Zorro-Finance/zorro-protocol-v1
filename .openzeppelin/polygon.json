@@ -2,25 +2,20 @@
   "manifestVersion": "3.2",
   "proxies": [
     {
-      "address": "0xea0A5161aaa95c31b42dC06beBed38F8cec5a87a",
-      "txHash": "0x93c58e60743eb799ad581adf908c00b9abb69b756f3ab7b0c908b7e81c7527e0",
+      "address": "0xbaa62418679F1433D337414a3144f57908913567",
+      "txHash": "0x42cbd9734a1021b236db46596eb1219ddfff32bd52204ec3af5eabd34ec4bb7d",
       "kind": "uups"
     },
     {
-      "address": "0x144B0148b7613D73FE620c1614e7a6af785a9c61",
-      "txHash": "0xacbae28c26d8b6ed201c6408f6470996a6f8fd44c6c242cdda3dd64aafd57a4a",
-      "kind": "uups"
-    },
-    {
-      "address": "0xd5d9DD5837Fc1ACEBEC207BB5D75858859eadfD0",
-      "txHash": "0x46cf61c56129178afc8d0430d9b63d4f0649e1ba09d0d06f3051db8901b43b1d",
+      "address": "0x52a236d6a45984e81340fEa984890B2f83ab659F",
+      "txHash": "0xc2a632449124b90e692caca8f5664de8d0ef9a1bc61b7b60032c1c463170db68",
       "kind": "uups"
     }
   ],
   "impls": {
     "c6185f637182acb30aba0f26005e7098157044a13f3651c269b877017e390aba": {
-      "address": "0xab4DCEFBCf9d7B3e89b3d9fac5EA21c9440b6f08",
-      "txHash": "0x2de3c6e10806faf0163504365b61a2ad2dfdf1f5abe1897c297f0ed036d78498",
+      "address": "0xd5d9DD5837Fc1ACEBEC207BB5D75858859eadfD0",
+      "txHash": "0x765a8cf4a45bff6e41c2cdf12a4c91b0c0f99fdc227e9137a68eb9f9628f0001",
       "layout": {
         "solcVersion": "0.8.18",
         "storage": [
@@ -103,7 +98,7 @@
             "slot": "251",
             "type": "t_address",
             "contract": "ControllerXChain",
-            "src": "contracts/controllers/ControllerXChain.sol:71"
+            "src": "contracts/controllers/ControllerXChain.sol:73"
           },
           {
             "label": "stargateRouter",
@@ -111,7 +106,7 @@
             "slot": "252",
             "type": "t_address",
             "contract": "ControllerXChain",
-            "src": "contracts/controllers/ControllerXChain.sol:72"
+            "src": "contracts/controllers/ControllerXChain.sol:74"
           },
           {
             "label": "currentChain",
@@ -119,7 +114,7 @@
             "slot": "252",
             "type": "t_uint16",
             "contract": "ControllerXChain",
-            "src": "contracts/controllers/ControllerXChain.sol:73"
+            "src": "contracts/controllers/ControllerXChain.sol:75"
           },
           {
             "label": "sgPoolId",
@@ -127,7 +122,7 @@
             "slot": "253",
             "type": "t_uint256",
             "contract": "ControllerXChain",
-            "src": "contracts/controllers/ControllerXChain.sol:74"
+            "src": "contracts/controllers/ControllerXChain.sol:76"
           },
           {
             "label": "router",
@@ -135,7 +130,7 @@
             "slot": "254",
             "type": "t_address",
             "contract": "ControllerXChain",
-            "src": "contracts/controllers/ControllerXChain.sol:77"
+            "src": "contracts/controllers/ControllerXChain.sol:79"
           },
           {
             "label": "stablecoin",
@@ -143,7 +138,7 @@
             "slot": "255",
             "type": "t_address",
             "contract": "ControllerXChain",
-            "src": "contracts/controllers/ControllerXChain.sol:78"
+            "src": "contracts/controllers/ControllerXChain.sol:80"
           },
           {
             "label": "stablecoinPriceFeed",
@@ -151,7 +146,7 @@
             "slot": "256",
             "type": "t_contract(AggregatorV3Interface)45",
             "contract": "ControllerXChain",
-            "src": "contracts/controllers/ControllerXChain.sol:79"
+            "src": "contracts/controllers/ControllerXChain.sol:81"
           }
         ],
         "types": {
@@ -190,9 +185,9 @@
         }
       }
     },
-    "b7f52d240d5f4455d13b4d6672986da1da3e707181cd0dc5b6eea25bdfd3cd09": {
-      "address": "0xb69cFa7efb06ceC5784b26b402a4f2F82f52211C",
-      "txHash": "0x9822f2e38956ccd6961fedeb2f19fb74c79c17e254ba0570227e1443dcce93fd",
+    "77cb9ea37134f0eff606474ce787ca1842669f8bbb63e87127b69679d6e3240c": {
+      "address": "0xe3Af1E531A2aa134706b2BFD886AC8ee83824a70",
+      "txHash": "0x9266f990edca301622cc63135ddfad690f239621d9caacfec9385971efb1b865",
       "layout": {
         "solcVersion": "0.8.18",
         "storage": [

@@ -1,2 +1,5 @@
 contract_class,network,deployment_address,source,date
 ControllerXChain,avax,0x144B0148b7613D73FE620c1614e7a6af785a9c61,deploy_001.ts,2023-04-08T16:52:07.194Z
+TraderJoeAMMV1,avalanche,0xd5d9DD5837Fc1ACEBEC207BB5D75858859eadfD0,deploy_002.ts,2023-04-09T14:26:00.368Z
+ControllerXChain,matic,0xbaa62418679F1433D337414a3144f57908913567,deploy_001.ts,2023-04-09T14:42:00.000Z
+SushiSwapAMM,matic,0x52a236d6a45984e81340fEa984890B2f83ab659F,deploy_003.ts,2023-04-09T14:59:32.000Z

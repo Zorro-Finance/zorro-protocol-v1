@@ -83,6 +83,10 @@ export const deployAMMVault = async (
             kind: 'uups',
         }
     );
+
+    // Block until deployed
+    await vault.deployed();
+
     const implementationAddress = await upgrades.erc1967.getImplementationAddress(vault.address);
 
     // Log 
