@@ -26,17 +26,17 @@ const config: HardhatUserConfig = {
         url: 'https://api.avax.network/ext/bc/C/rpc'
       },
     },
-    avax: {
+    avalanche: {
       url: 'https://api.avax.network/ext/bc/C/rpc',
       chainId: 43114,
       accounts: [process.env.DEPLOYER_PRIVATE_KEY!]
     },
-    polygon: {
+    matic: {
       url: 'https://polygon-rpc.com',
       chainId: 137,
       accounts: [process.env.DEPLOYER_PRIVATE_KEY!]
     },
-    bnb: {
+    bsc: {
       url: 'https://bsc-dataseed.binance.org',
       chainId: 56,
       accounts: [process.env.DEPLOYER_PRIVATE_KEY!]
@@ -45,7 +45,7 @@ const config: HardhatUserConfig = {
   etherscan: {
     apiKey: {
       avalanche: process.env.SNOWTRACE_API_KEY!,
-      polygon: process.env.POLYGONSCAN_API_KEY!,
+      matic: process.env.POLYGONSCAN_API_KEY!,
       bsc: process.env.BSCSCAN_API_KEY!,
     },
   },

@@ -11,7 +11,7 @@ describe('VaultBase', () => {
         const [owner, otherAccount] = await ethers.getSigners();
 
         // Get init arguments for contract deployment
-        const initArgs: any[] = deploymentArgs('avax', 'TJ_AVAX_USDC', owner.address, owner.address);
+        const initArgs: any[] = deploymentArgs('avalanche', 'TJ_AVAX_USDC', owner.address, owner.address);
 
         // Get contract factory
         const Vault = await ethers.getContractFactory('TraderJoeAMMV1');
@@ -38,9 +38,9 @@ describe('VaultBase', () => {
             const decimals = await vault.decimals();
 
             // Test
-            expect(treasury).to.equal(chains.avax.admin.multiSigOwner);
-            expect(router).to.equal(chains.avax.infra.uniRouterAddress);
-            expect(stablecoin).to.equal(chains.avax.tokens.usdc);
+            expect(treasury).to.equal(chains.avalanche.admin.multiSigOwner);
+            expect(router).to.equal(chains.avalanche.infra.uniRouterAddress);
+            expect(stablecoin).to.equal(chains.avalanche.tokens.usdc);
             expect(entranceFeeFactor).to.equal(vaultFees.entranceFeeFactor);
             expect(withdrawFeeFactor).to.equal(vaultFees.withdrawFeeFactor);
             expect(defaultSlippageFactor).to.equal(9900);

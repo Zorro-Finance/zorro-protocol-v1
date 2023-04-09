@@ -1,4 +1,4 @@
-import { ChainList } from "./types";
+import { ChainListOpt } from "./types";
 
 export const zeroAddress = '0x0000000000000000000000000000000000000000';
 
@@ -7,8 +7,8 @@ export const team = [
     '0xb1711a188052B00fCaF19a650e69E6856a44bE77',
 ];
 
-export const chains: ChainList = {
-    avax: {
+export const chains: ChainListOpt = {
+    avalanche: {
         xChain: {
             lzChainId: 106,
             sgPoolId: 1, // USDC
@@ -45,7 +45,7 @@ export const chains: ChainList = {
             multiSigOwner: '0x0426B99e80783CB9b7C0741C9c9E1d0FAb3f80e7',
         },
     },
-    polygon: {
+    matic: {
         xChain: {
             lzChainId: 109,
             sgPoolId: 1, // USDC
@@ -84,7 +84,7 @@ export const chains: ChainList = {
             multiSigOwner: '0x1cE192d20ccD646d8fF9a47D2C4A364bBD1bea1a',
         },
     },
-    bnb: {
+    bsc: {
         xChain: {
             lzChainId: 102,
             sgPoolId: 5, // BUSD
@@ -113,48 +113,6 @@ export const chains: ChainList = {
         admin: {
             timelockOwner: zeroAddress, // TODO: Add in when starting BNB chain
             multiSigOwner: zeroAddress, // TODO: Add in when starting BNB chain
-        },
-    },
-    avaxtest: {
-        xChain: {
-            lzChainId: 10106,
-            sgPoolId: 2, // USDT
-        },
-        tokens: {
-            usdc: '0x4A0D1092E9df255cf95D72834Ea9255132782318',
-        },
-        priceFeeds: {},
-        infra: {
-            layerZeroEndpoint: '0x93f54D755A063cE7bB9e6Ac47Eccc8e33411d706',
-            stargateRouter: '0x13093E05Eb890dfA6DacecBdE51d24DabAb2Faa1',
-            uniFactoryAddress: zeroAddress,
-            uniRouterAddress: zeroAddress,
-        },
-        protocols: {},
-        admin: {
-            timelockOwner: zeroAddress,
-            multiSigOwner: zeroAddress,
-        },
-    },
-    bnbtest: {
-        xChain: {
-            lzChainId: 10102,
-            sgPoolId: 5, // BUSD
-        },
-        tokens: {
-            busd: '0x1010Bb1b9Dff29e6233E7947e045e0ba58f6E92e',
-        },
-        priceFeeds: {},
-        infra: {
-            layerZeroEndpoint: '0x6Fcb97553D41516Cb228ac03FdC8B9a0a9df04A1',
-            stargateRouter: '0xbB0f1be1E9CE9cB27EA5b0c3a85B7cc3381d8176',
-            uniFactoryAddress: zeroAddress,
-            uniRouterAddress: zeroAddress,
-        },
-        protocols: {},
-        admin: {
-            timelockOwner: zeroAddress,
-            multiSigOwner: zeroAddress,
         },
     },
 };

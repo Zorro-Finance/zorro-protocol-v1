@@ -3,13 +3,14 @@ import { deployAMMVault } from "../../helpers/deployments/utilities";
 import hre from 'hardhat';
 import { chains } from "../../helpers/constants";
 import { basename } from 'path';
+import { PublicNetwork } from '../../helpers/types';
 
 async function main() {
   // Init
-  const network = hre.network.name;
+  const network = hre.network.name as PublicNetwork;
 
   // Network check
-  if (network !== 'avax') {
+  if (network !== 'avalanche') {
     return;
   }
 
@@ -23,7 +24,7 @@ async function main() {
     pool,
     protocol,
     network,
-    deploymentArgs(network, pool, chains[network].admin.timelockOwner, chains[network].admin.multiSigOwner),
+    deploymentArgs(network, pool, chains[network]!.admin.timelockOwner, chains[network]!.admin.multiSigOwner),
     basename(__filename)
   );
 }

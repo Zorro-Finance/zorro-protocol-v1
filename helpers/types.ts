@@ -1,3 +1,5 @@
+import { network } from "hardhat";
+
 interface XChainConfig {
     lzChainId: number;
     sgPoolId: number;
@@ -50,6 +52,11 @@ interface ChainConfig {
     admin: AdminConfig;
 }
 
-export interface ChainList {
-    [network: string]: ChainConfig;
-}
+export type ChainList = {
+    [network in PublicNetwork]: ChainConfig;
+};
+
+export type ChainListOpt = Partial<ChainList>;
+
+// Mimic OZ Defender types (node_modules/defender-base-client/lib/utils/network.d.ts)
+export type PublicNetwork = 'mainnet' | 'goerli' | 'xdai' | 'sokol' | 'fuse' | 'bsc' | 'bsctest' | 'fantom' | 'fantomtest' | 'moonbase' | 'moonriver' | 'moonbeam' | 'matic' | 'mumbai' | 'avalanche' | 'fuji' | 'optimism' | 'optimism-goerli' | 'arbitrum' | 'arbitrum-nova' | 'arbitrum-goerli' | 'celo' | 'alfajores' | 'harmony-s0' | 'harmony-test-s0' | 'aurora' | 'auroratest' | 'hedera' | 'hederatest' | 'zksync' | 'zksync-goerli';

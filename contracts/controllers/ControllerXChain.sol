@@ -22,6 +22,8 @@ import "../libraries/LPUtility.sol";
 
 import "../libraries/SafeSwap.sol";
 
+// TODO: Make pausable
+
 /// @title ControllerXChain
 /// @notice Controls all cross chain operations
 contract ControllerXChain is

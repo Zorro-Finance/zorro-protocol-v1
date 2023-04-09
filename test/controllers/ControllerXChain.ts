@@ -13,7 +13,7 @@ describe('ControllerXChain', () => {
         const [owner, otherAccount] = await ethers.getSigners();
 
         // Get init arguments for contract deployment
-        const initArgs: any[] = deploymentArgsController('avax', owner.address);
+        const initArgs: any[] = deploymentArgsController('avalanche', owner.address);
 
         // Get contract factory
         const Controller = await ethers.getContractFactory('ControllerXChain');
@@ -28,7 +28,7 @@ describe('ControllerXChain', () => {
         const [owner, otherAccount] = await ethers.getSigners();
 
         // Get init arguments for contract deployment
-        const initArgs: any[] = deploymentArgsVault('avax', 'TJ_AVAX_USDC', owner.address, owner.address);
+        const initArgs: any[] = deploymentArgsVault('avalanche', 'TJ_AVAX_USDC', owner.address, owner.address);
 
         // Get contract factory
         const Vault = await ethers.getContractFactory('TraderJoeAMMV1');
@@ -43,10 +43,10 @@ describe('ControllerXChain', () => {
         const [owner, otherAccount] = await ethers.getSigners();
 
         // Get router
-        const router = await ethers.getContractAt('IJoeRouter02', chains.avax.infra.uniRouterAddress);
+        const router = await ethers.getContractAt('IJoeRouter02', chains.avalanche.infra.uniRouterAddress);
 
         // Get min USDC out and account for some slippage 
-        const path = [chains.avax.tokens.wavax, chains.avax.tokens.usdc];
+        const path = [chains.avalanche.tokens.wavax, chains.avalanche.tokens.usdc];
         const amountsOut = await router.getAmountsOut(
             amountETH,
             path
@@ -80,14 +80,14 @@ describe('ControllerXChain', () => {
             const _owner = await controller.owner();
 
             // Test
-            expect(layerZeroEndpoint).to.equal(chains.avax.infra.layerZeroEndpoint);
-            expect(stargateRouter).to.equal(chains.avax.infra.stargateRouter);
-            expect(currentChain).to.equal(chains.avax.xChain.lzChainId);
-            expect(sgPoolId).to.equal(chains.avax.xChain.sgPoolId);
+            expect(layerZeroEndpoint).to.equal(chains.avalanche.infra.layerZeroEndpoint);
+            expect(stargateRouter).to.equal(chains.avalanche.infra.stargateRouter);
+            expect(currentChain).to.equal(chains.avalanche.xChain.lzChainId);
+            expect(sgPoolId).to.equal(chains.avalanche.xChain.sgPoolId);
 
-            expect(router).to.equal(chains.avax.infra.uniRouterAddress);
-            expect(stablecoin).to.equal(chains.avax.tokens.usdc);
-            expect(stablecoinPriceFeed).to.equal(chains.avax.priceFeeds.usdc);
+            expect(router).to.equal(chains.avalanche.infra.uniRouterAddress);
+            expect(stablecoin).to.equal(chains.avalanche.tokens.usdc);
+            expect(stablecoinPriceFeed).to.equal(chains.avalanche.priceFeeds.usdc);
             expect(_owner).to.equal(owner.address);
         });
     });
@@ -203,7 +203,7 @@ describe('ControllerXChain', () => {
 
             // USD prep
             await getAssets(ethers.utils.parseEther('10'));
-            const usdc = await ethers.getContractAt('IERC20Upgradeable', chains.avax.tokens.usdc);
+            const usdc = await ethers.getContractAt('IERC20Upgradeable', chains.avalanche.tokens.usdc);
             const amountUSD = (await usdc.balanceOf(owner.address)).div(10);
             const slippageFactor = 9900;
 
@@ -267,7 +267,7 @@ describe('ControllerXChain', () => {
 
             // Payload for receiving deposit
             const slippageFactor = 9900;
-            const usdc = await ethers.getContractAt('IERC20Upgradeable', chains.avax.tokens.usdc);
+            const usdc = await ethers.getContractAt('IERC20Upgradeable', chains.avalanche.tokens.usdc);
             const valueUSD = (await usdc.balanceOf(owner.address)).div(10);
             const payload = controller.interface.encodeFunctionData(
                 'receiveDepositRequest',
@@ -359,7 +359,7 @@ describe('ControllerXChain', () => {
 
             // Get USD
             await getAssets(ethers.utils.parseEther('10'));
-            const usdc = await ethers.getContractAt('IERC20Upgradeable', chains.avax.tokens.usdc);
+            const usdc = await ethers.getContractAt('IERC20Upgradeable', chains.avalanche.tokens.usdc);
 
             // Make deposit into vault
             const slippageFactor = 9000;
@@ -440,7 +440,7 @@ describe('ControllerXChain', () => {
             const nonce = 4096;
 
             // Payload for receiving deposit
-            const usdc = await ethers.getContractAt('IERC20Upgradeable', chains.avax.tokens.usdc);
+            const usdc = await ethers.getContractAt('IERC20Upgradeable', chains.avalanche.tokens.usdc);
             const valueUSD = (await usdc.balanceOf(owner.address)).div(10);
             const payload = controller.interface.encodeFunctionData(
                 'receiveWithdrawalRequest',

@@ -1,5 +1,9 @@
-import {appendFile, existsSync} from 'fs';
+import { appendFile, existsSync } from 'fs';
 import { ethers, upgrades } from 'hardhat';
+import hre from 'hardhat';
+import { AdminClient, Contract } from 'defender-admin-client';
+import { FormatTypes } from '@ethersproject/abi';
+import { PublicNetwork } from '../types';
 
 const getISODateTime = (): string => {
     return (new Date()).toISOString();
@@ -11,7 +15,7 @@ export const recordVaultDeployment = (
     protocol: string,
     pool: string,
     deploymentAddress: string,
-    source: string 
+    source: string
 ) => {
     const data = `${vaultContractClass},${network},${protocol},${pool},${deploymentAddress},${source},${getISODateTime()}\n`;
     const headers = 'vault_contract_class,network,protocol,pool,deployment_address,source,date\n';
@@ -39,7 +43,7 @@ export const recordDeployment = (
     contractClass: string,
     network: string,
     deploymentAddress: string,
-    source: string 
+    source: string
 ) => {
     const data = `${contractClass},${network},${deploymentAddress},${source},${getISODateTime()}\n`;
     const headers = 'contract_class,network,deployment_address,source,date\n';
@@ -66,30 +70,64 @@ export const deployAMMVault = async (
     protocol: string,
     network: string,
     deploymentArgs: any[],
-    source: string
+    source: string,
+    shouldVerifyContract: boolean = true,
+    shouldUploadToDefender: boolean = true
 ) => {
-      // Deploy initial AMM vaults
-  const Vault = await ethers.getContractFactory(vaultContractClass);
-  const vault = await upgrades.deployProxy(
-    Vault,
-    deploymentArgs,
-    {
-      kind: 'uups',
+    // Deploy initial AMM vaults
+    const Vault = await ethers.getContractFactory(vaultContractClass);
+    const vault = await upgrades.deployProxy(
+        Vault,
+        deploymentArgs,
+        {
+            kind: 'uups',
+        }
+    );
+    const implementationAddress = await upgrades.erc1967.getImplementationAddress(vault.address);
+
+    // Log 
+    console.log(
+        `${vaultContractClass}::${pool} proxy deployed to ${vault.address} and implementation deployed to ${implementationAddress}`
+    );
+
+    // Verify contract optionally
+    if (shouldVerifyContract) {
+        await verifyContract(implementationAddress, []);
     }
-  );
 
-  // Log 
-  console.log(
-    `${vaultContractClass}::${pool} deployed to ${vault.address}`
-  );
+    // Upload contract to Defender
+    if (shouldUploadToDefender) {
+        await uploadContractToDefender({
+            network: network as PublicNetwork,
+            address: vault.address,
+            name: vaultContractClass,
+            abi: Vault.interface.format(FormatTypes.json)! as string
+        });
+    }
 
-  // Record the contract deployment in a lock file
-  recordVaultDeployment(
-    vaultContractClass,
-    network,
-    protocol,
-    pool,
-    vault.address,
-    source
-  );
+    // Record the contract deployment in a lock file
+    recordVaultDeployment(
+        vaultContractClass,
+        network,
+        protocol,
+        pool,
+        vault.address,
+        source
+    );
+};
+
+export const verifyContract = async (
+    implementationAddress: string,
+    constructorArguments: any[]
+) => {
+    await hre.run("verify:verify", {
+        address: implementationAddress,
+        constructorArguments,
+    });
+};
+
+export const uploadContractToDefender = async (contract: Contract) => {
+    const client = new AdminClient({ apiKey: process.env.DEFENDER_API_KEY!, apiSecret: process.env.DEFENDER_API_SECRET! });
+
+    await client.addContract(contract);
 };

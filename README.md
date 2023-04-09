@@ -44,7 +44,7 @@ _NOTE: Addresses coming soon, and will be updated below once contracts are deplo
 
 ## Coming soon
 
-* Polygon
+* Polygon (Matic)
 * Fantom
 * Solana
 
@@ -130,14 +130,21 @@ and optionally specify a network, but it will default to `hardhat`.
 # Console
 
 ```shell
-npx hardhat console
+npx hardhat console --network mynetwork
+
+```
+
+# Local hardhat node/chain
+
+```shell
+npx hardhat node
 
 ```
 
 # Deploy/migrate
 
 ```shell
-npx hardhat run --network avax scripts/deployments/deploy_001.ts
+npx hardhat run --network avalanche scripts/deployments/deploy_001.ts
 ```
 
 All deployments log information/history to _deployments/contracts.lock_ to keep a record of deployments.
