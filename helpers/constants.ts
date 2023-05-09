@@ -67,6 +67,7 @@ export const chains: ChainListOpt = {
             uniFactoryAddress: '0xc35DADB65012eC5796536bD9864eD8773aBc74C4',
             stargateRouter: '0x45A01E4e04F14f7A4a6702c74187c5F6222033cd',
             layerZeroEndpoint: '0x3c2269811836af69497E5F486A85D7316753cf62',
+            gaslessForwarder: '0xB2b5841DBeF766d4b521221732F9B618fCf34A87',
         },
         protocols: {
             sushiswap: {

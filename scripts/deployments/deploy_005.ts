@@ -1,9 +1,8 @@
 import { ethers, upgrades } from "hardhat";
-import {deploymentArgs} from '../../helpers/deployments/controllers/ControllerXChain/deployment';
 import { recordDeployment, uploadContractToDefender, verifyContract } from "../../helpers/deployments/utilities";
 import {basename} from 'path';
 import hre from 'hardhat';
-import { chains } from "../../helpers/constants";
+import { chains, team } from "../../helpers/constants";
 import { FormatTypes } from "@ethersproject/abi";
 import { PublicNetwork } from "../../helpers/types";
 
@@ -11,41 +10,50 @@ async function main() {
   // Init
   const network = hre.network.name as PublicNetwork;
 
-  // Deploy XChain controller
-  const controllerName = 'ControllerXChain';
-  const Controller = await ethers.getContractFactory(controllerName);
-  const controller = await upgrades.deployProxy(
-    Controller,
-    deploymentArgs(network, chains[network]!.admin.timelockOwner),
+  // Deploy TeamWallet
+  const walletName = 'TeamWallet';
+  const TeamWallet = await ethers.getContractFactory(walletName);
+  const totalShares = ethers.utils.parseEther('1'); // 1e18
+  const shares = [
+    totalShares.div(2),
+    totalShares.div(2),
+  ];
+  const teamWallet = await upgrades.deployProxy(
+    TeamWallet,
+    [
+      team,
+      shares,
+      chains[network]!.admin.timelockOwner,
+    ],
     {
       kind: 'uups',
-    }
+    },
   );
 
   // Block until deployed
-  await controller.deployed();
+  await teamWallet.deployed();
 
   // Verify contract and send to Etherscan
-  await verifyContract(await upgrades.erc1967.getImplementationAddress(controller.address), []);
+  await verifyContract(await upgrades.erc1967.getImplementationAddress(teamWallet.address), []);
 
   // Upload contract to Defender
   await uploadContractToDefender({
     network: network as PublicNetwork,
-    address: controller.address,
-    name: controllerName,
-    abi: Controller.interface.format(FormatTypes.json)! as string
-  });
+    address: teamWallet.address,
+    name: walletName,
+    abi: TeamWallet.interface.format(FormatTypes.json)! as string
+});
 
   // Log 
   console.log(
-    `ControllerXChain deployed to ${controller.address}`
+    `TeamWallet deployed to ${teamWallet.address}`
   );
 
   // Record the contract deployment in a lock file
   recordDeployment(
-    controllerName,
+    walletName,
     network,
-    controller.address,
+    teamWallet.address,
     basename(__filename)
   );
 }

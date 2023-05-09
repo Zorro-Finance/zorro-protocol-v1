@@ -6,7 +6,22 @@ import {deploymentArgs} from '../../helpers/deployments/vaults/VaultAMM/TraderJo
 import { zeroAddress, chains, vaultFees } from "../../helpers/constants";
 
 describe('VaultBase', () => {
+    async function deployGaslessForwarder() {
+        // Contracts are deployed using the first signer/account by default
+        const [owner, otherAccount] = await ethers.getSigners();
+        
+        // Get gasless forwarder
+        const GaslessForwarder = await ethers.getContractFactory('GaslessForwarder');
+        const gaslessForwarder = await GaslessForwarder.deploy();
+        await gaslessForwarder.deployed();
+
+        return {gaslessForwarder, owner, otherAccount};
+    }
+
     async function deployVaultBaseFixture() {
+        // Get forwarder
+        const {gaslessForwarder} = await deployGaslessForwarder();
+
         // Contracts are deployed using the first signer/account by default
         const [owner, otherAccount] = await ethers.getSigners();
 
@@ -15,7 +30,9 @@ describe('VaultBase', () => {
 
         // Get contract factory
         const Vault = await ethers.getContractFactory('TraderJoeAMMV1');
-        const vault = await upgrades.deployProxy(Vault, initArgs);
+        const vault = await upgrades.deployProxy(Vault, initArgs, {
+            constructorArgs: [gaslessForwarder.address],
+        });
         await vault.deployed();
 
         return {vault, owner, otherAccount};
@@ -38,9 +55,9 @@ describe('VaultBase', () => {
             const decimals = await vault.decimals();
 
             // Test
-            expect(treasury).to.equal(chains.avalanche.admin.multiSigOwner);
-            expect(router).to.equal(chains.avalanche.infra.uniRouterAddress);
-            expect(stablecoin).to.equal(chains.avalanche.tokens.usdc);
+            expect(treasury).to.equal(chains.avalanche!.admin.multiSigOwner);
+            expect(router).to.equal(chains.avalanche!.infra.uniRouterAddress);
+            expect(stablecoin).to.equal(chains.avalanche!.tokens.usdc);
             expect(entranceFeeFactor).to.equal(vaultFees.entranceFeeFactor);
             expect(withdrawFeeFactor).to.equal(vaultFees.withdrawFeeFactor);
             expect(defaultSlippageFactor).to.equal(9900);

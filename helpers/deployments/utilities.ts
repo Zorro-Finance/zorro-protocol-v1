@@ -70,6 +70,7 @@ export const deployAMMVault = async (
     protocol: string,
     network: string,
     deploymentArgs: any[],
+    constructorArgs: any[],
     source: string,
     shouldVerifyContract: boolean = true,
     shouldUploadToDefender: boolean = true
@@ -80,6 +81,7 @@ export const deployAMMVault = async (
         Vault,
         deploymentArgs,
         {
+            constructorArgs,
             kind: 'uups',
         }
     );

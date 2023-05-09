@@ -1,8 +1,8 @@
-import {deploymentArgs} from '../../helpers/deployments/vaults/VaultAMM/Sushiswap/deployment';
+import { deploymentArgs } from '../../helpers/deployments/vaults/VaultAMM/TraderJoe/deployment';
 import { deployAMMVault } from "../../helpers/deployments/utilities";
+import hre from 'hardhat';
 import { chains } from "../../helpers/constants";
 import { basename } from 'path';
-import hre from 'hardhat';
 import { PublicNetwork } from '../../helpers/types';
 
 async function main() {
@@ -10,14 +10,14 @@ async function main() {
   const network = hre.network.name as PublicNetwork;
 
   // Network check
-  if (network !== 'matic') {
+  if (network !== 'avalanche') {
     return;
   }
-  
+
   // Deploy initial AMM vaults
-  const vaultContractClass = 'SushiSwapAMM'
-  const pool = 'SUSHI_WMATIC_WETH';
-  const protocol = 'sushiswap';
+  const vaultContractClass = 'TraderJoeAMMV1'
+  const pool = 'TJ_AVAX_USDC';
+  const protocol = 'traderjoe';
 
   await deployAMMVault(
     vaultContractClass,

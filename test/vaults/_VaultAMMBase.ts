@@ -1,5 +1,4 @@
 import { time, loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 import { deploymentArgs } from '../../helpers/deployments/vaults/VaultAMM/TraderJoe/deployment';
@@ -7,7 +6,19 @@ import { chains } from "../../helpers/constants";
 import { BigNumber } from "ethers";
 
 describe('VaultAMMBase', () => {
+    async function deployGaslessForwarder() {
+        // Get gasless forwarder
+        const GaslessForwarder = await ethers.getContractFactory('GaslessForwarder');
+        const gaslessForwarder = await GaslessForwarder.deploy();
+        await gaslessForwarder.deployed();
+
+        return {gaslessForwarder};
+    }
+
     async function deployVaultAMMBaseFixture() {
+        // Get forwarder
+        const {gaslessForwarder} = await deployGaslessForwarder();
+
         // Contracts are deployed using the first signer/account by default
         const [owner, otherAccount] = await ethers.getSigners();
 
@@ -16,7 +27,9 @@ describe('VaultAMMBase', () => {
 
         // Get contract factory
         const Vault = await ethers.getContractFactory('TraderJoeAMMV1');
-        const vault = await upgrades.deployProxy(Vault, initArgs);
+        const vault = await upgrades.deployProxy(Vault, initArgs, {
+            constructorArgs: [gaslessForwarder.address],
+        });
         await vault.deployed();
 
         return { vault, owner, otherAccount };
@@ -27,13 +40,13 @@ describe('VaultAMMBase', () => {
         const [owner, otherAccount] = await ethers.getSigners();
 
         // Get LP pair
-        const pair = await ethers.getContractAt('IUniswapV2Pair', chains.avalanche.protocols.traderjoe.pools.AVAX_USDC.pool);
+        const pair = await ethers.getContractAt('IUniswapV2Pair', chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pool);
 
         // Get router
-        const router = await ethers.getContractAt('IJoeRouter02', chains.avalanche.infra.uniRouterAddress);
+        const router = await ethers.getContractAt('IJoeRouter02', chains.avalanche!.infra.uniRouterAddress);
 
         // Get min USDC out and account for some slippage 
-        const path = [chains.avalanche.tokens.wavax, chains.avalanche.tokens.usdc];
+        const path = [chains.avalanche!.tokens.wavax, chains.avalanche!.tokens.usdc];
         const amountsOut = await router.getAmountsOut(
             amountETH,
             path
@@ -50,7 +63,7 @@ describe('VaultAMMBase', () => {
         );
 
         // Get USDC balance
-        const usdc = await ethers.getContractAt('IERC20Upgradeable', chains.avalanche.tokens.usdc);
+        const usdc = await ethers.getContractAt('IERC20Upgradeable', chains.avalanche!.tokens.usdc);
         const balUSDC = await usdc.balanceOf(owner.address);
 
         // Add liquidity, while preserving half of the USDC
@@ -58,7 +71,7 @@ describe('VaultAMMBase', () => {
         const amountAVAXIn = amountUSDCIn.mul(amountETH).div(amountsOut[amountsOut.length-1]);
         await usdc.approve(router.address, amountUSDCIn);
         await router.addLiquidityAVAX(
-            chains.avalanche.tokens.usdc,
+            chains.avalanche!.tokens.usdc,
             amountUSDCIn,
             0,
             0,
@@ -84,26 +97,26 @@ describe('VaultAMMBase', () => {
             const pool = await vault.pool();
 
             // Check swap paths
-            expect(await vault.swapPathLength(chains.avalanche.tokens.wavax, chains.avalanche.tokens.usdc)).to.equal(2);
-            expect(await vault.swapPathLength(chains.avalanche.tokens.usdc, chains.avalanche.tokens.usdc)).to.equal(0);
-            expect(await vault.swapPathLength(chains.avalanche.tokens.wavax, chains.avalanche.tokens.usdc)).to.equal(2);
-            expect(await vault.swapPathLength(chains.avalanche.tokens.joe, chains.avalanche.tokens.wavax)).to.equal(2);
-            expect(await vault.swapPathLength(chains.avalanche.tokens.joe, chains.avalanche.tokens.usdc)).to.equal(2);
+            expect(await vault.swapPathLength(chains.avalanche!.tokens.wavax, chains.avalanche!.tokens.usdc)).to.equal(2);
+            expect(await vault.swapPathLength(chains.avalanche!.tokens.usdc, chains.avalanche!.tokens.usdc)).to.equal(0);
+            expect(await vault.swapPathLength(chains.avalanche!.tokens.wavax, chains.avalanche!.tokens.usdc)).to.equal(2);
+            expect(await vault.swapPathLength(chains.avalanche!.tokens.joe, chains.avalanche!.tokens.wavax)).to.equal(2);
+            expect(await vault.swapPathLength(chains.avalanche!.tokens.joe, chains.avalanche!.tokens.usdc)).to.equal(2);
 
             // Check price feeds
-            expect(await vault.priceFeeds(chains.avalanche.tokens.wavax)).to.equal(chains.avalanche.priceFeeds.avax);
-            expect(await vault.priceFeeds(chains.avalanche.tokens.usdc)).to.equal(chains.avalanche.priceFeeds.usdc);
-            expect(await vault.priceFeeds(chains.avalanche.tokens.joe)).to.equal(chains.avalanche.priceFeeds.joe);
+            expect(await vault.priceFeeds(chains.avalanche!.tokens.wavax)).to.equal(chains.avalanche!.priceFeeds.avax);
+            expect(await vault.priceFeeds(chains.avalanche!.tokens.usdc)).to.equal(chains.avalanche!.priceFeeds.usdc);
+            expect(await vault.priceFeeds(chains.avalanche!.tokens.joe)).to.equal(chains.avalanche!.priceFeeds.joe);
 
             // Test
-            expect(asset).to.equal(chains.avalanche.protocols.traderjoe.pools.AVAX_USDC.pool);
-            expect(token0).to.equal(chains.avalanche.tokens.wavax);
-            expect(token1).to.equal(chains.avalanche.tokens.usdc);
-            expect(farmContract).to.equal(chains.avalanche.protocols.traderjoe.masterChef);
-            expect(rewardsToken).to.equal(chains.avalanche.tokens.joe);
+            expect(asset).to.equal(chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pool);
+            expect(token0).to.equal(chains.avalanche!.tokens.wavax);
+            expect(token1).to.equal(chains.avalanche!.tokens.usdc);
+            expect(farmContract).to.equal(chains.avalanche!.protocols.traderjoe.masterChef);
+            expect(rewardsToken).to.equal(chains.avalanche!.tokens.joe);
             expect(isFarmable).to.equal(true);
-            expect(pid).to.equal(chains.avalanche.protocols.traderjoe.pools.AVAX_USDC.pid);
-            expect(pool).to.equal(chains.avalanche.protocols.traderjoe.pools.AVAX_USDC.pool);
+            expect(pid).to.equal(chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pid);
+            expect(pool).to.equal(chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pool);
         });
     });
 
@@ -152,13 +165,11 @@ describe('VaultAMMBase', () => {
     describe('Deposits', () => {
         it('Deposits main asset token', async () => {
             // Prep
-            
-            // Get vault
             const { vault, owner } = await loadFixture(deployVaultAMMBaseFixture);
             
             // Get LP Token
             await getAssets(ethers.utils.parseEther('10'));
-            const pair = await ethers.getContractAt('IUniswapV2Pair', chains.avalanche.protocols.traderjoe.pools.AVAX_USDC.pool);
+            const pair = await ethers.getContractAt('IUniswapV2Pair', chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pool);
             const balLP = await pair.balanceOf(owner.address);
             const amountLP = balLP.div(10);
 
@@ -183,13 +194,11 @@ describe('VaultAMMBase', () => {
 
         it('Deposits asset token twice', async () => {
             // Prep
-            
-            // Get vault
             const { vault, owner } = await loadFixture(deployVaultAMMBaseFixture);
             
             // Get LP Token
             await getAssets(ethers.utils.parseEther('10'));
-            const pair = await ethers.getContractAt('IUniswapV2Pair', chains.avalanche.protocols.traderjoe.pools.AVAX_USDC.pool);
+            const pair = await ethers.getContractAt('IUniswapV2Pair', chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pool);
             const balLP = await pair.balanceOf(owner.address);
             const amountLP = balLP.div(10);
 
@@ -211,13 +220,11 @@ describe('VaultAMMBase', () => {
 
         it('Deposits USD', async () => {
             // Prep
-            
-            // Get vault
             const { vault, owner } = await loadFixture(deployVaultAMMBaseFixture);
             
             // Get LP Token
             await getAssets(ethers.utils.parseEther('10'));
-            const usdc = await ethers.getContractAt('IERC20Upgradeable', chains.avalanche.tokens.usdc);
+            const usdc = await ethers.getContractAt('IERC20Upgradeable', chains.avalanche!.tokens.usdc);
             const balUSDC = await usdc.balanceOf(owner.address);
             const amountUSDC = balUSDC.div(10);
 
@@ -235,13 +242,11 @@ describe('VaultAMMBase', () => {
     describe('Withdrawals', () => {
         it('Withdraws main asset token (full withdrawal)', async () => {
             // Prep
-            
-            // Get vault
             const { vault, owner } = await loadFixture(deployVaultAMMBaseFixture);
             
             // Get LP Token
             await getAssets(ethers.utils.parseEther('10'));
-            const pair = await ethers.getContractAt('IUniswapV2Pair', chains.avalanche.protocols.traderjoe.pools.AVAX_USDC.pool);
+            const pair = await ethers.getContractAt('IUniswapV2Pair', chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pool);
             const balLP = await pair.balanceOf(owner.address);
             const amountLP = balLP.div(10);
 
@@ -270,17 +275,15 @@ describe('VaultAMMBase', () => {
 
         it('Withdraws main asset token twice (partial withdrawals)', async () => {
             // Prep
-            
-            // Get vault
             const { vault, owner } = await loadFixture(deployVaultAMMBaseFixture);
             
             // Get LP Token
             await getAssets(ethers.utils.parseEther('10'));
-            const pair = await ethers.getContractAt('IUniswapV2Pair', chains.avalanche.protocols.traderjoe.pools.AVAX_USDC.pool);
+            const pair = await ethers.getContractAt('IUniswapV2Pair', chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pool);
             const amountLP = await pair.balanceOf(owner.address);
 
             // Get farm contract
-            const masterChef = await ethers.getContractAt('IBoostedMasterChefJoe', chains.avax.protocols.traderjoe.masterChef!);
+            const masterChef = await ethers.getContractAt('IBoostedMasterChefJoe', chains.avalanche!.protocols.traderjoe.masterChef!);
 
             // Make deposit
             await pair.approve(vault.address, amountLP);
@@ -304,7 +307,7 @@ describe('VaultAMMBase', () => {
 
             // Advance a few blocks and update masterchef pool rewards
             for (let i=0; i<100; i++) {
-                await masterChef.updatePool(chains.avalanche.protocols.traderjoe.pools.AVAX_USDC.pid!);
+                await masterChef.updatePool(chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pid!);
             }
 
             // Make withdrawal 2
@@ -342,13 +345,11 @@ describe('VaultAMMBase', () => {
 
         it('Withdraws to USD', async () => {
             // Prep
-            
-            // Get vault
             const { vault, owner } = await loadFixture(deployVaultAMMBaseFixture);
             
             // Get LP Token
             await getAssets(ethers.utils.parseEther('10'));
-            const pair = await ethers.getContractAt('IUniswapV2Pair', chains.avalanche.protocols.traderjoe.pools.AVAX_USDC.pool);
+            const pair = await ethers.getContractAt('IUniswapV2Pair', chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pool);
             const balLP = await pair.balanceOf(owner.address);
             const amountLP = balLP.div(10);
 
@@ -373,18 +374,16 @@ describe('VaultAMMBase', () => {
     describe('Earnings', () => {
         it('Compounds (reinvests) farm rewards', async () => {
             // Prep
-
-            // Get vault
             const { vault, owner } = await loadFixture(deployVaultAMMBaseFixture);
             
             // Get LP Token
             await getAssets(ethers.utils.parseEther('10'));
-            const pair = await ethers.getContractAt('IUniswapV2Pair', chains.avalanche.protocols.traderjoe.pools.AVAX_USDC.pool);
+            const pair = await ethers.getContractAt('IUniswapV2Pair', chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pool);
             const balLP = await pair.balanceOf(owner.address);
             const amountLP = balLP.div(10);
 
             // Get farm contract
-            const masterChef = await ethers.getContractAt('IBoostedMasterChefJoe', chains.avalanche.protocols.traderjoe.masterChef!);
+            const masterChef = await ethers.getContractAt('IBoostedMasterChefJoe', chains.avalanche!.protocols.traderjoe.masterChef!);
 
             // Run
 
@@ -394,7 +393,7 @@ describe('VaultAMMBase', () => {
 
             // Advance blocks (need many to produce enough rewards)
             for (let i=0; i<500; i++) {
-                await masterChef.updatePool(chains.avalanche.protocols.traderjoe.pools.AVAX_USDC.pid!);
+                await masterChef.updatePool(chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pid!);
             }
 
             // Earn
@@ -430,18 +429,16 @@ describe('VaultAMMBase', () => {
     describe('Utilities', () => {
         it('Should calculuate amount farmed', async () => {
             // Prep
-            
-            // Get vault
             const { vault, owner } = await loadFixture(deployVaultAMMBaseFixture);
             
             // Get LP Token
             await getAssets(ethers.utils.parseEther('10'));
-            const pair = await ethers.getContractAt('IUniswapV2Pair', chains.avalanche.protocols.traderjoe.pools.AVAX_USDC.pool);
+            const pair = await ethers.getContractAt('IUniswapV2Pair', chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pool);
             const balLP = await pair.balanceOf(owner.address);
             const amountLP = balLP.div(10);
 
             // Get farm contract
-            const masterChef = await ethers.getContractAt('IBoostedMasterChefJoe', chains.avalanche.protocols.traderjoe.masterChef!);
+            const masterChef = await ethers.getContractAt('IBoostedMasterChefJoe', chains.avalanche!.protocols.traderjoe.masterChef!);
 
             // Run
 
@@ -451,7 +448,7 @@ describe('VaultAMMBase', () => {
 
             // Advance a few blocks and update masterchef pool rewards
             for (let i=0; i<5; i++) {
-                await masterChef.updatePool(chains.avalanche.protocols.traderjoe.pools.AVAX_USDC.pid!);
+                await masterChef.updatePool(chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pid!);
             }
 
             // Test
@@ -460,16 +457,14 @@ describe('VaultAMMBase', () => {
 
         it('Should calculuate pending rewards farmed', async () => {
             // Prep
-            
-            // Get vault
             const { vault, owner } = await loadFixture(deployVaultAMMBaseFixture);
 
             // Get farm contract
-            const masterChef = await ethers.getContractAt('IBoostedMasterChefJoe', chains.avalanche.protocols.traderjoe.masterChef!);
+            const masterChef = await ethers.getContractAt('IBoostedMasterChefJoe', chains.avalanche!.protocols.traderjoe.masterChef!);
             
             // Get LP Token
             await getAssets(ethers.utils.parseEther('10'));
-            const pair = await ethers.getContractAt('IUniswapV2Pair', chains.avalanche.protocols.traderjoe.pools.AVAX_USDC.pool);
+            const pair = await ethers.getContractAt('IUniswapV2Pair', chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pool);
             const balLP = await pair.balanceOf(owner.address);
             const amountLP = balLP.div(10);
 
@@ -478,7 +473,7 @@ describe('VaultAMMBase', () => {
             await vault.deposit(amountLP);
             // Advance a few blocks and update masterchef pool rewards
             for (let i=0; i<5; i++) {
-                await masterChef.updatePool(chains.avalanche.protocols.traderjoe.pools.AVAX_USDC.pid!);
+                await masterChef.updatePool(chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pid!);
             }
 
             // Test

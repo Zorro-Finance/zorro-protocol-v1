@@ -1,14 +1,25 @@
 import { time, loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 import { deploymentArgs as deploymentArgsController } from "../../helpers/deployments/controllers/ControllerXChain/deployment";
 import { deploymentArgs as deploymentArgsVault } from "../../helpers/deployments/vaults/VaultAMM/TraderJoe/deployment";
 import { chains } from "../../helpers/constants";
-import { BigNumber } from "ethers";
+import { BigNumber, Contract } from "ethers";
 
 describe('ControllerXChain', () => {
+    async function deployGaslessForwarder() {
+        // Get gasless forwarder
+        const GaslessForwarder = await ethers.getContractFactory('GaslessForwarder');
+        const gaslessForwarder = await GaslessForwarder.deploy();
+        await gaslessForwarder.deployed();
+
+        return {gaslessForwarder};
+    }
+
     async function deployControllerXChainFixture() {
+        // Get forwarder
+        const {gaslessForwarder} = await deployGaslessForwarder();
+
         // Contracts are deployed using the first signer/account by default
         const [owner, otherAccount] = await ethers.getSigners();
 
@@ -17,13 +28,18 @@ describe('ControllerXChain', () => {
 
         // Get contract factory
         const Controller = await ethers.getContractFactory('ControllerXChain');
-        const controller = await upgrades.deployProxy(Controller, initArgs);
+        const controller = await upgrades.deployProxy(Controller, initArgs, {
+            constructorArgs: [gaslessForwarder.address],
+        });
         await controller.deployed();
 
         return { controller, owner, otherAccount };
     }
 
     async function deployVaultAMMBaseFixture() {
+        // Get forwarder
+        const {gaslessForwarder} = await deployGaslessForwarder();
+
         // Contracts are deployed using the first signer/account by default
         const [owner, otherAccount] = await ethers.getSigners();
 
@@ -32,7 +48,9 @@ describe('ControllerXChain', () => {
 
         // Get contract factory
         const Vault = await ethers.getContractFactory('TraderJoeAMMV1');
-        const vault = await upgrades.deployProxy(Vault, initArgs);
+        const vault = await upgrades.deployProxy(Vault, initArgs, {
+            constructorArgs: [gaslessForwarder.address],
+        });
         await vault.deployed();
 
         return { vault, owner, otherAccount };
@@ -43,10 +61,10 @@ describe('ControllerXChain', () => {
         const [owner, otherAccount] = await ethers.getSigners();
 
         // Get router
-        const router = await ethers.getContractAt('IJoeRouter02', chains.avalanche.infra.uniRouterAddress);
+        const router = await ethers.getContractAt('IJoeRouter02', chains.avalanche!.infra.uniRouterAddress);
 
         // Get min USDC out and account for some slippage 
-        const path = [chains.avalanche.tokens.wavax, chains.avalanche.tokens.usdc];
+        const path = [chains.avalanche!.tokens.wavax, chains.avalanche!.tokens.usdc];
         const amountsOut = await router.getAmountsOut(
             amountETH,
             path
@@ -80,14 +98,14 @@ describe('ControllerXChain', () => {
             const _owner = await controller.owner();
 
             // Test
-            expect(layerZeroEndpoint).to.equal(chains.avalanche.infra.layerZeroEndpoint);
-            expect(stargateRouter).to.equal(chains.avalanche.infra.stargateRouter);
-            expect(currentChain).to.equal(chains.avalanche.xChain.lzChainId);
-            expect(sgPoolId).to.equal(chains.avalanche.xChain.sgPoolId);
+            expect(layerZeroEndpoint).to.equal(chains.avalanche!.infra.layerZeroEndpoint);
+            expect(stargateRouter).to.equal(chains.avalanche!.infra.stargateRouter);
+            expect(currentChain).to.equal(chains.avalanche!.xChain.lzChainId);
+            expect(sgPoolId).to.equal(chains.avalanche!.xChain.sgPoolId);
 
-            expect(router).to.equal(chains.avalanche.infra.uniRouterAddress);
-            expect(stablecoin).to.equal(chains.avalanche.tokens.usdc);
-            expect(stablecoinPriceFeed).to.equal(chains.avalanche.priceFeeds.usdc);
+            expect(router).to.equal(chains.avalanche!.infra.uniRouterAddress);
+            expect(stablecoin).to.equal(chains.avalanche!.tokens.usdc);
+            expect(stablecoinPriceFeed).to.equal(chains.avalanche!.priceFeeds.usdc);
             expect(_owner).to.equal(owner.address);
         });
     });
@@ -203,7 +221,7 @@ describe('ControllerXChain', () => {
 
             // USD prep
             await getAssets(ethers.utils.parseEther('10'));
-            const usdc = await ethers.getContractAt('IERC20Upgradeable', chains.avalanche.tokens.usdc);
+            const usdc = await ethers.getContractAt('IERC20Upgradeable', chains.avalanche!.tokens.usdc);
             const amountUSD = (await usdc.balanceOf(owner.address)).div(10);
             const slippageFactor = 9900;
 
@@ -267,7 +285,7 @@ describe('ControllerXChain', () => {
 
             // Payload for receiving deposit
             const slippageFactor = 9900;
-            const usdc = await ethers.getContractAt('IERC20Upgradeable', chains.avalanche.tokens.usdc);
+            const usdc = await ethers.getContractAt('IERC20Upgradeable', chains.avalanche!.tokens.usdc);
             const valueUSD = (await usdc.balanceOf(owner.address)).div(10);
             const payload = controller.interface.encodeFunctionData(
                 'receiveDepositRequest',
@@ -359,7 +377,7 @@ describe('ControllerXChain', () => {
 
             // Get USD
             await getAssets(ethers.utils.parseEther('10'));
-            const usdc = await ethers.getContractAt('IERC20Upgradeable', chains.avalanche.tokens.usdc);
+            const usdc = await ethers.getContractAt('IERC20Upgradeable', chains.avalanche!.tokens.usdc);
 
             // Make deposit into vault
             const slippageFactor = 9000;
@@ -440,7 +458,7 @@ describe('ControllerXChain', () => {
             const nonce = 4096;
 
             // Payload for receiving deposit
-            const usdc = await ethers.getContractAt('IERC20Upgradeable', chains.avalanche.tokens.usdc);
+            const usdc = await ethers.getContractAt('IERC20Upgradeable', chains.avalanche!.tokens.usdc);
             const valueUSD = (await usdc.balanceOf(owner.address)).div(10);
             const payload = controller.interface.encodeFunctionData(
                 'receiveWithdrawalRequest',

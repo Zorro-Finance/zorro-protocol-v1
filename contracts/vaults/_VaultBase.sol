@@ -14,6 +14,10 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
+import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/draft-ERC20PermitUpgradeable.sol";
+
+import "@openzeppelin/contracts-upgradeable/metatx/ERC2771ContextUpgradeable.sol";
+
 import "../interfaces/Zorro/vaults/IVault.sol";
 
 import "../libraries/PriceFeed.sol";
@@ -28,6 +32,8 @@ abstract contract VaultBase is
     PausableUpgradeable,
     ReentrancyGuardUpgradeable,
     UUPSUpgradeable,
+    ERC20PermitUpgradeable,
+    ERC2771ContextUpgradeable,
     IVault
 {
     /* Constants */
@@ -41,6 +47,13 @@ abstract contract VaultBase is
     using SafeSwapUni for IAMMRouter02;
 
     /* Constructor */
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    /// @notice Constructor
+    /// @param _trustedForwarder Address of trusted forwarder contract
+    constructor(
+        address _trustedForwarder
+    ) ERC2771ContextUpgradeable(_trustedForwarder) {}
 
     /// @notice Upgradeable constructor
     /// @param _initVal A VaultInit struct
@@ -70,6 +83,9 @@ abstract contract VaultBase is
 
         // Call the ERC20 constructor to set initial values
         super.__ERC20_init("ZOR LP Vault", "ZLPV");
+
+        // Call the ERC20Permit constructor with the same token name
+        super.__ERC20Permit_init("ZOR LP Vault");
     }
 
     /* State */
@@ -173,17 +189,18 @@ abstract contract VaultBase is
         gov = _gov;
     }
 
-    /* Utilities */
+    /* Gasless implementation */
 
-    /// @notice For owner to recover ERC20 tokens on this contract if stuck
-    /// @dev Does not permit usage for the Zorro token
-    /// @param _token ERC20 token address
-    /// @param _amount token quantity
-    function inCaseTokensGetStuck(
-        address _token,
-        uint256 _amount
-    ) public onlyOwner {
-        IERC20Upgradeable(_token).safeTransfer(_msgSender(), _amount);
+    /// @dev Resolve ambiguity of two Context parents
+    /// @inheritdoc	ERC2771ContextUpgradeable
+    function _msgSender() internal view virtual override(ContextUpgradeable, ERC2771ContextUpgradeable) returns (address sender) {
+        return ERC2771ContextUpgradeable._msgSender();
+    }
+
+    /// @dev Resolve ambiguity of two Context parents
+    /// @inheritdoc	ERC2771ContextUpgradeable
+    function _msgData() internal view virtual override(ContextUpgradeable, ERC2771ContextUpgradeable) returns (bytes calldata) {
+        return ERC2771ContextUpgradeable._msgData();
     }
 
     /* Maintenance Functions */

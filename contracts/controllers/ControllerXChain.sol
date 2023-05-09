@@ -12,6 +12,8 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
+import "@openzeppelin/contracts-upgradeable/metatx/ERC2771ContextUpgradeable.sol";
+
 import "../interfaces/Stargate/IStargateRouter.sol";
 
 import "../interfaces/Zorro/controllers/IControllerXChain.sol";
@@ -30,7 +32,8 @@ contract ControllerXChain is
     IControllerXChain,
     OwnableUpgradeable,
     ReentrancyGuardUpgradeable,
-    UUPSUpgradeable
+    UUPSUpgradeable,
+    ERC2771ContextUpgradeable
 {
     /* Constants */
 
@@ -44,7 +47,14 @@ contract ControllerXChain is
 
     /* Constructor */
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
     /// @notice Constructor
+    /// @param _trustedForwarder Address of trusted forwarder contract
+    constructor(
+        address _trustedForwarder
+    ) ERC2771ContextUpgradeable(_trustedForwarder) {}
+
+    /// @notice Upgradeable constructor
     /// @param _initVal A ControllerXChainInit struct
     /// @param _timelockOwner The designated owner of this contract (usually a timelock)
     function initialize(
@@ -122,6 +132,32 @@ contract ControllerXChain is
             "Unrecog xchain sender"
         );
         _;
+    }
+
+    /* Gasless implementation */
+
+    /// @dev Resolve ambiguity of two Context parents
+    /// @inheritdoc	ERC2771ContextUpgradeable
+    function _msgSender()
+        internal
+        view
+        virtual
+        override(ContextUpgradeable, ERC2771ContextUpgradeable)
+        returns (address sender)
+    {
+        return ERC2771ContextUpgradeable._msgSender();
+    }
+
+    /// @dev Resolve ambiguity of two Context parents
+    /// @inheritdoc	ERC2771ContextUpgradeable
+    function _msgData()
+        internal
+        view
+        virtual
+        override(ContextUpgradeable, ERC2771ContextUpgradeable)
+        returns (bytes calldata)
+    {
+        return ERC2771ContextUpgradeable._msgData();
     }
 
     /* Deposits */
@@ -213,7 +249,7 @@ contract ControllerXChain is
             _dstChain,
             _dstPoolId,
             _balUSD,
-            _balUSD * _slippageFactor / BP_DENOMINATOR,
+            (_balUSD * _slippageFactor) / BP_DENOMINATOR,
             _remoteControllerXChain,
             _dstGasForCall,
             _payload
@@ -346,7 +382,7 @@ contract ControllerXChain is
             _dstChain,
             _dstPoolId,
             _balUSD,
-            _balUSD * _slippageFactor / BP_DENOMINATOR,
+            (_balUSD * _slippageFactor) / BP_DENOMINATOR,
             _remoteControllerXChain,
             _dstGasForCall,
             _payload
@@ -507,18 +543,7 @@ contract ControllerXChain is
         paramsPayload = _payloadWithSig[4:];
     }
 
-    /// @notice For owner to recover ERC20 tokens on this contract if stuck
-    /// @dev Does not permit usage for the Zorro token
-    /// @param _token ERC20 token address
-    /// @param _amount token quantity
-    function inCaseTokensGetStuck(
-        address _token,
-        uint256 _amount
-    ) public onlyOwner {
-        IERC20Upgradeable(_token).safeTransfer(_msgSender(), _amount);
-    }
-
     /* Proxy implementations */
-    
+
     function _authorizeUpgrade(address) internal override onlyOwner {}
 }
