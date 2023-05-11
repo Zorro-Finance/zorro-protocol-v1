@@ -19,12 +19,15 @@ async function main() {
   const pool = 'SUSHI_WMATIC_WETH';
   const protocol = 'sushiswap';
 
+  // TODO: Rather than deploying from scratch, use same beacon
+
   await deployAMMVault(
     vaultContractClass,
     pool,
     protocol,
     network,
     deploymentArgs(network, pool, chains[network]!.admin.timelockOwner, chains[network]!.admin.multiSigOwner),
+    [chains.matic!.infra.gaslessForwarder!],
     basename(__filename)
   );
 }

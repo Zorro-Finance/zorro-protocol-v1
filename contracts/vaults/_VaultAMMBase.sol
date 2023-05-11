@@ -10,6 +10,9 @@ import "./_VaultBase.sol";
 
 import "../libraries/LPUtility.sol";
 
+// TODO
+import "hardhat/console.sol";
+
 /// @title VaultAMMBase
 /// @notice Abstract base contract for standard AMM based vaults
 abstract contract VaultAMMBase is VaultBase, IVaultAMM {
@@ -133,17 +136,21 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         uint256 _amountUSD,
         uint256 _maxSlippageFactor
     ) external nonReentrant {
+        console.log("Entered deposit with amount %s", _amountUSD);
+
         // Safe transfer IN USD*
         IERC20Upgradeable(stablecoin).safeTransferFrom(
             _msgSender(),
             address(this),
             _amountUSD
         );
-
+        
+        
         // Get balance of USD
         uint256 _balUSD = IERC20Upgradeable(stablecoin).balanceOf(
             address(this)
         );
+        console.log("Transferred USD IN successfully. Bal: %s", _balUSD);
 
         // Swap USD* into token0, token1 (if applicable)
         if (token0 != stablecoin) {
@@ -172,9 +179,11 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
             );
         }
 
+
         // Get token balances
         uint256 _balToken0 = IERC20Upgradeable(token0).balanceOf(address(this));
         uint256 _balToken1 = IERC20Upgradeable(token1).balanceOf(address(this));
+        console.log("swaps completed. Bal0: %s, Bal1: %s", _balToken0, _balToken1);
 
         // Add liquidity
         IAMMRouter02(router).joinPool(
@@ -189,11 +198,17 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         // Measure balance of LP token
         uint256 _balLPToken = IERC20Upgradeable(pool).balanceOf(address(this));
 
+        console.log("joined pool. Bal LP token: %s", _balLPToken);
+
         // Call core deposit function
         uint256 _sharesAdded = _deposit(_balLPToken);
 
+        console.log("Added shares successfully: %s", _sharesAdded);
+
         // Emit log
         emit DepositUSD(pool, _amountUSD, _sharesAdded, _maxSlippageFactor);
+
+        console.log("FIN");
     }
 
     /// @notice Core deposit function

@@ -12,8 +12,6 @@ import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/draft-ERC20PermitUpgradeable.sol";
 
 import "@openzeppelin/contracts-upgradeable/metatx/ERC2771ContextUpgradeable.sol";
@@ -31,7 +29,6 @@ abstract contract VaultBase is
     OwnableUpgradeable,
     PausableUpgradeable,
     ReentrancyGuardUpgradeable,
-    UUPSUpgradeable,
     ERC20PermitUpgradeable,
     ERC2771ContextUpgradeable,
     IVault
@@ -77,9 +74,6 @@ abstract contract VaultBase is
 
         // Governor
         gov = _gov;
-
-        // Proxy init
-        __UUPSUpgradeable_init();
 
         // Call the ERC20 constructor to set initial values
         super.__ERC20_init("ZOR LP Vault", "ZLPV");
@@ -214,8 +208,4 @@ abstract contract VaultBase is
     function unpause() public virtual onlyAllowGov {
         _unpause();
     }
-
-    /* Proxy implementations */
-    
-    function _authorizeUpgrade(address) internal override onlyOwner {}
 }

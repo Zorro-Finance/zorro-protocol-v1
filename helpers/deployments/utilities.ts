@@ -77,28 +77,36 @@ export const deployAMMVault = async (
 ) => {
     // Deploy initial AMM vaults
     const Vault = await ethers.getContractFactory(vaultContractClass);
-    const vault = await upgrades.deployProxy(
+    // TODO: Create tests for forwarding
+
+    // Deploy beacon contract
+    const beacon = await upgrades.deployBeacon(Vault, {
+        constructorArgs,
+    });
+    await beacon.deployed();
+
+    // Deploy beacon proxy
+    const vault = await upgrades.deployBeaconProxy(
+        beacon,
         Vault,
         deploymentArgs,
         {
-            constructorArgs,
-            kind: 'uups',
+            kind: 'beacon',
         }
     );
+    await vault.deployed();
 
     // Block until deployed
     await vault.deployed();
 
-    const implementationAddress = await upgrades.erc1967.getImplementationAddress(vault.address);
-
     // Log 
     console.log(
-        `${vaultContractClass}::${pool} proxy deployed to ${vault.address} and implementation deployed to ${implementationAddress}`
+        `${vaultContractClass}::${pool} proxy deployed to ${vault.address} and implementation deployed to ${beacon.address}`
     );
 
     // Verify contract optionally
     if (shouldVerifyContract) {
-        await verifyContract(implementationAddress, []);
+        await verifyContract(beacon.address, []);
     }
 
     // Upload contract to Defender

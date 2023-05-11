@@ -15,7 +15,7 @@ async function main() {
   }
 
   // Deploy initial AMM vaults
-  const vaultContractClass = 'TraderJoeAMMV1'
+  const vaultContractClass = 'TraderJoeAMMV1';
   const pool = 'TJ_AVAX_USDC';
   const protocol = 'traderjoe';
 
@@ -25,6 +25,7 @@ async function main() {
     protocol,
     network,
     deploymentArgs(network, pool, chains[network]!.admin.timelockOwner, chains[network]!.admin.multiSigOwner),
+    [chains.avalanche!.infra.gaslessForwarder!],
     basename(__filename)
   );
 }

@@ -48,8 +48,13 @@ describe('ControllerXChain', () => {
 
         // Get contract factory
         const Vault = await ethers.getContractFactory('TraderJoeAMMV1');
-        const vault = await upgrades.deployProxy(Vault, initArgs, {
+        const beacon = await upgrades.deployBeacon(Vault, {
             constructorArgs: [gaslessForwarder.address],
+        });
+        await beacon.deployed();
+
+        const vault = await upgrades.deployBeaconProxy(beacon.address, Vault, initArgs, {
+            kind: 'beacon',
         });
         await vault.deployed();
 
