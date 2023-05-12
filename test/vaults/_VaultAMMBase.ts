@@ -74,16 +74,16 @@ describe('VaultAMMBase', () => {
         owner: SignerWithAddress | Wallet,
         spender: string,
         token: Contract,
-        amount: BigNumber
+        amount: BigNumber,
+        version: string,
     ) {
         // Get chain
         const { chainId } = await owner.provider!.getNetwork();
-        console.log('chainId from owner provider: ', chainId);
 
         // Sign a permit transaction
         const domain = {
             name: await token.name(),
-            version: '2',
+            version,
             chainId, // 0xA86A,
             verifyingContract: token.address,
         };
@@ -319,7 +319,7 @@ describe('VaultAMMBase', () => {
     });
 
     describe('Withdrawals', () => {
-        xit('Withdraws main asset token (full withdrawal)', async () => {
+        it('Withdraws main asset token (full withdrawal)', async () => {
             // Prep
             const { vault, owner } = await loadFixture(deployVaultAMMBaseFixture);
 
@@ -338,7 +338,7 @@ describe('VaultAMMBase', () => {
             // Make withdrawal
             const shares = await vault.totalSupply();
             await vault.approve(vault.address, shares);
-            await vault.withdraw(shares, 9900);
+            await vault.withdraw(shares);
 
             // Test
 
@@ -373,7 +373,7 @@ describe('VaultAMMBase', () => {
             // Make withdrawal 1
             const shares = await vault.totalSupply();
             await vault.approve(vault.address, shares.div(2));
-            await vault.withdraw(shares.div(2), 9900);
+            await vault.withdraw(shares.div(2));
 
             // Expect roughly the amount returned to equal the amount deposited minus fees
             expect(await pair.balanceOf(owner.address)).to.be.closeTo((amountLP.div(2)).mul(99).div(100), 10);
@@ -385,15 +385,13 @@ describe('VaultAMMBase', () => {
             expect(await vault.amountFarmed()).to.be.closeTo(amountLP.div(2), 10);
 
             // Advance a few blocks and update masterchef pool rewards
-            for (let i = 0; i < 100; i++) {
-                await masterChef.updatePool(chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pid!);
-            }
+            mine(1000);
+            await masterChef.updatePool(chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pid!);
 
             // Make withdrawal 2
             const sharesRemaining = await vault.totalSupply();
             await vault.approve(vault.address, sharesRemaining);
-            const tx = await vault.withdraw(sharesRemaining, 9000);
-            const receipt = await tx.wait();
+            const tx = await vault.withdraw(sharesRemaining);
 
             // Test
 
@@ -406,23 +404,11 @@ describe('VaultAMMBase', () => {
             // Asset token unfarmed
             expect(await vault.amountFarmed()).to.equal(0);
 
-            // Encode event logs
-            const reinvestSig = ethers.utils.id('ReinvestEarnings(uint256,address)');
-
-            // Find matching log
-            let matchingLog: any | undefined = undefined;
-            for (let log of receipt.logs) {
-                if (log.topics[0] === reinvestSig) {
-                    matchingLog = log;
-                    break;
-                }
-            }
-
             // Assert that earnings ocurred on the second withdrawal
-            expect(matchingLog).to.not.be.undefined;
+            await expect(tx).to.emit(vault, 'ReinvestEarnings');
         });
 
-        xit('Withdraws to USD', async () => {
+        it('Withdraws to USD', async () => {
             // Prep
             const { vault, owner } = await loadFixture(deployVaultAMMBaseFixture);
 
@@ -477,7 +463,8 @@ describe('VaultAMMBase', () => {
                 wallet0,
                 vault.address,
                 usdc,
-                amountUSDC
+                amountUSDC,
+                '2'
             );
             // Get permit for allowance
             await usdc.permit(
@@ -490,8 +477,6 @@ describe('VaultAMMBase', () => {
                 sig.s
             );
 
-            console.log('usdbal: ', await usdc.allowance(wallet0.address, vault.address));
-            console.log('amountusdc for tx: ', amountUSDC);
             // Get signature for deposit
             const metaTxRes = await getTransactPermitSignature(
                 wallet0,
@@ -501,7 +486,7 @@ describe('VaultAMMBase', () => {
                 'deposit'
             );
             // Make deposit meta transaction
-            await vault.transactUSDWithPermit(
+            const tx = await vault.transactUSDWithPermit(
                 wallet0.address,
                 amountUSDC,
                 maxMarketMovement,
@@ -513,11 +498,80 @@ describe('VaultAMMBase', () => {
             );
 
             // Test
-            // TODO
+
+            // Assert that earnings ocurred on the second withdrawal
+            await expect(tx).to.emit(vault, 'DepositUSD');
         });
 
         it('Withdraws shares to USD as a meta transaction', async () => {
+            // Prep
+            const { vault, owner } = await loadFixture(deployVaultAMMBaseFixture);
+            const maxMarketMovement = 9900; // Slippage: 1%
 
+            // Get LP Token
+            await getAssets(ethers.utils.parseEther('10'));
+            const pair = await ethers.getContractAt('IUniswapV2Pair', chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pool);
+            const balLP = await pair.balanceOf(owner.address);
+            const amountLP = balLP.div(10);
+
+            // Get wallet
+            const signerProvider = owner.provider!;
+            const wallet0PK = ethers.Wallet.createRandom().privateKey;
+            const wallet0 = new ethers.Wallet(wallet0PK, signerProvider);
+
+            // Make deposit
+            await pair.approve(vault.address, amountLP);
+            await vault.deposit(amountLP);
+
+            // Transfer shars to wallet for signature
+            const balShares = await vault.balanceOf(owner.address);
+            await vault.transfer(wallet0.address, balShares);
+
+            // Run
+
+            // Permit share transfer (gasless)
+            const { sig, deadline } = await getPermitSignature(
+                wallet0,
+                vault.address,
+                vault,
+                balShares,
+                '1'
+            );
+            // Get permit for allowance
+            await vault.permit(
+                wallet0.address,
+                vault.address,
+                balShares,
+                deadline,
+                sig.v,
+                sig.r,
+                sig.s
+            );
+
+            // Permit withdrawal transaction (gasless)
+            const metaTxRes = await getTransactPermitSignature(
+                wallet0,
+                vault,
+                balShares,
+                maxMarketMovement,
+                'withdraw'
+            );
+            // Make withdrawal meta transaction
+            const tx = await vault.transactUSDWithPermit(
+                wallet0.address,
+                balShares,
+                maxMarketMovement,
+                1, // Withdrawal
+                metaTxRes.deadline,
+                metaTxRes.sig.v,
+                metaTxRes.sig.r,
+                metaTxRes.sig.s,
+            );
+
+            // Test
+
+            // Assert that earnings ocurred on the second withdrawal
+            await expect(tx).to.emit(vault, 'WithdrawUSD');
         });
     });
 
@@ -543,11 +597,10 @@ describe('VaultAMMBase', () => {
 
             // Advance blocks (need many to produce enough rewards)
             mine(1000);
+            await masterChef.updatePool(chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pid!);
 
             // Earn
-            const tx = await vault.earn(9000, false); // 10% slippage. WARNING: Because of low rewards after time elapsed in test, test could fail if slippage set incorrectly
-
-            const receipt = await tx.wait();
+            const tx = await vault.earn(); // WARNING: Because of low rewards after time elapsed in test, test could fail if slippage set incorrectly
 
             // Test
 
@@ -558,19 +611,7 @@ describe('VaultAMMBase', () => {
             expect(await vault.lastEarn()).to.equal(await ethers.provider.getBlockNumber());
 
             // Expect log to be emitted
-
-            // Encode event logs
-            const reinvestSig = ethers.utils.id('ReinvestEarnings(uint256,address)');
-
-            // Find matching log
-            let matchingLog: any | undefined = undefined;
-            for (let log of receipt.logs) {
-                if (log.topics[0] === reinvestSig) {
-                    matchingLog = log;
-                    break;
-                }
-            }
-            expect(matchingLog).to.not.be.undefined;
+            await expect(tx).to.emit(vault, 'ReinvestEarnings');
         });
     });
 

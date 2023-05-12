@@ -27,15 +27,13 @@ interface IVault is IERC20Upgradeable {
     event WithdrawAsset(
         address indexed _pool,
         uint256 indexed _shares,
-        uint256 indexed _amountAssetRemoved,
-        bool withdrewWithoutEarn
+        uint256 indexed _amountAssetRemoved
     );
 
     event WithdrawUSD(
         address indexed _pool,
         uint256 indexed _amountUSD,
         uint256 indexed _sharesRemoved,
-        bool withdrewWithoutEarn,
         uint256 _maxSlippageFactor
     );
 

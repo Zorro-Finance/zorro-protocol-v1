@@ -26,7 +26,6 @@
   "description": "Zorro protocol for managing cross chain DeFi positions",
   "dependencies": {
     "@chainlink/contracts": "0.4.0",
-    "@opengsn/contracts": "^3.0.0-beta.6",
     "@openzeppelin/contracts": "^4.8.1",
     "@openzeppelin/contracts-upgradeable": "^4.5.2",
     "@openzeppelin/hardhat-upgrades": "^1.22.1",

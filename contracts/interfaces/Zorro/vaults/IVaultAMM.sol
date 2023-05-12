@@ -8,6 +8,7 @@ import "./IVault.sol";
 /// @notice Interface for Standard AMM based vaults
 interface IVaultAMM is IVault {
     /* Events */
+    event VaultAMMFailedEarn ();
 
     /* Structs */
 
@@ -51,8 +52,7 @@ interface IVaultAMM is IVault {
 
     /// @notice Withdraws main asset and sends back to sender
     /// @param _shares The number of shares of the main asset to withdraw
-    /// @param _maxSlippageFactor The slippage tolerance (9900 = 1%)
-    function withdraw(uint256 _shares, uint256 _maxSlippageFactor) external;
+    function withdraw(uint256 _shares) external;
 
     // Accounting
 
