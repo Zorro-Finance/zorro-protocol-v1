@@ -18,7 +18,6 @@ interface InfraConfig {
     uniFactoryAddress: string;
     stargateRouter: string;
     layerZeroEndpoint: string;
-    gaslessForwarder?: string;
 }
 
 interface PoolConfig {

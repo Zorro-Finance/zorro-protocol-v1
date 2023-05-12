@@ -7,19 +7,7 @@ import { chains } from "../../helpers/constants";
 import { BigNumber, Contract } from "ethers";
 
 describe('ControllerXChain', () => {
-    async function deployGaslessForwarder() {
-        // Get gasless forwarder
-        const GaslessForwarder = await ethers.getContractFactory('GaslessForwarder');
-        const gaslessForwarder = await GaslessForwarder.deploy();
-        await gaslessForwarder.deployed();
-
-        return {gaslessForwarder};
-    }
-
     async function deployControllerXChainFixture() {
-        // Get forwarder
-        const {gaslessForwarder} = await deployGaslessForwarder();
-
         // Contracts are deployed using the first signer/account by default
         const [owner, otherAccount] = await ethers.getSigners();
 
@@ -28,18 +16,13 @@ describe('ControllerXChain', () => {
 
         // Get contract factory
         const Controller = await ethers.getContractFactory('ControllerXChain');
-        const controller = await upgrades.deployProxy(Controller, initArgs, {
-            constructorArgs: [gaslessForwarder.address],
-        });
+        const controller = await upgrades.deployProxy(Controller, initArgs);
         await controller.deployed();
 
         return { controller, owner, otherAccount };
     }
 
     async function deployVaultAMMBaseFixture() {
-        // Get forwarder
-        const {gaslessForwarder} = await deployGaslessForwarder();
-
         // Contracts are deployed using the first signer/account by default
         const [owner, otherAccount] = await ethers.getSigners();
 
@@ -48,9 +31,7 @@ describe('ControllerXChain', () => {
 
         // Get contract factory
         const Vault = await ethers.getContractFactory('TraderJoeAMMV1');
-        const beacon = await upgrades.deployBeacon(Vault, {
-            constructorArgs: [gaslessForwarder.address],
-        });
+        const beacon = await upgrades.deployBeacon(Vault);
         await beacon.deployed();
 
         const vault = await upgrades.deployBeaconProxy(beacon.address, Vault, initArgs, {

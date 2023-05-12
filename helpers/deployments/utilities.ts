@@ -70,7 +70,6 @@ export const deployAMMVault = async (
     protocol: string,
     network: string,
     deploymentArgs: any[],
-    constructorArgs: any[],
     source: string,
     shouldVerifyContract: boolean = true,
     shouldUploadToDefender: boolean = true
@@ -80,9 +79,7 @@ export const deployAMMVault = async (
     // TODO: Create tests for forwarding
 
     // Deploy beacon contract
-    const beacon = await upgrades.deployBeacon(Vault, {
-        constructorArgs,
-    });
+    const beacon = await upgrades.deployBeacon(Vault);
     await beacon.deployed();
 
     // Deploy beacon proxy

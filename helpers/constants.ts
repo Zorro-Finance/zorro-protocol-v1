@@ -28,7 +28,6 @@ export const chains: ChainListOpt = {
             uniFactoryAddress: '0x9Ad6C38BE94206cA50bb0d90783181662f0Cfa10',
             stargateRouter: '0x45A01E4e04F14f7A4a6702c74187c5F6222033cd',
             layerZeroEndpoint: '0x3c2269811836af69497E5F486A85D7316753cf62',
-            gaslessForwarder: '0x01a5a06C5Ba6E5f8FC9CB060492fae1b3d03c69d',
         },
         protocols: {
             traderjoe: {
@@ -68,7 +67,6 @@ export const chains: ChainListOpt = {
             uniFactoryAddress: '0xc35DADB65012eC5796536bD9864eD8773aBc74C4',
             stargateRouter: '0x45A01E4e04F14f7A4a6702c74187c5F6222033cd',
             layerZeroEndpoint: '0x3c2269811836af69497E5F486A85D7316753cf62',
-            gaslessForwarder: '0xdA78a11FD57aF7be2eDD804840eA7f4c2A38801d',
         },
         protocols: {
             sushiswap: {
@@ -105,7 +103,6 @@ export const chains: ChainListOpt = {
             uniFactoryAddress: '0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73',
             stargateRouter: '0x4a364f8c717cAAD9A442737Eb7b8A55cc6cf18D8',
             layerZeroEndpoint: '0x3c2269811836af69497E5F486A85D7316753cf62',
-            gaslessForwarder: '0xeB230bF62267E94e657b5cbE74bdcea78EB3a5AB',
         },
         protocols: {
             pancakeswap: {

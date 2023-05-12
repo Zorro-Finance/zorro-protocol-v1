@@ -6,22 +6,7 @@ import { deploymentArgs } from '../../helpers/deployments/vaults/VaultAMM/Trader
 import { zeroAddress, chains, vaultFees } from "../../helpers/constants";
 
 describe('VaultBase', () => {
-    async function deployGaslessForwarder() {
-        // Contracts are deployed using the first signer/account by default
-        const [owner, otherAccount] = await ethers.getSigners();
-
-        // Get gasless forwarder
-        const GaslessForwarder = await ethers.getContractFactory('GaslessForwarder');
-        const gaslessForwarder = await GaslessForwarder.deploy();
-        await gaslessForwarder.deployed();
-
-        return { gaslessForwarder, owner, otherAccount };
-    }
-
     async function deployVaultBaseFixture() {
-        // Get forwarder
-        const { gaslessForwarder } = await deployGaslessForwarder();
-
         // Contracts are deployed using the first signer/account by default
         const [owner, otherAccount] = await ethers.getSigners();
 
@@ -30,9 +15,7 @@ describe('VaultBase', () => {
 
         // Get contract factory
         const Vault = await ethers.getContractFactory('TraderJoeAMMV1');
-        const beacon = await upgrades.deployBeacon(Vault, {
-            constructorArgs: [gaslessForwarder.address],
-        });
+        const beacon = await upgrades.deployBeacon(Vault);
         await beacon.deployed();
 
         const vault = await upgrades.deployBeaconProxy(beacon, Vault, initArgs, {

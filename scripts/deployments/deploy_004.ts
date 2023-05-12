@@ -1,33 +1,59 @@
-import {deploymentArgs} from '../../helpers/deployments/vaults/VaultAMM/Sushiswap/deployment';
-import { deployAMMVault } from "../../helpers/deployments/utilities";
-import { chains } from "../../helpers/constants";
-import { basename } from 'path';
+import { ethers, upgrades } from "hardhat";
+import { recordDeployment, uploadContractToDefender, verifyContract } from "../../helpers/deployments/utilities";
+import {basename} from 'path';
 import hre from 'hardhat';
-import { PublicNetwork } from '../../helpers/types';
+import { chains, team } from "../../helpers/constants";
+import { FormatTypes } from "@ethersproject/abi";
+import { PublicNetwork } from "../../helpers/types";
 
 async function main() {
   // Init
   const network = hre.network.name as PublicNetwork;
 
-  // Network check
-  if (network !== 'matic') {
-    return;
-  }
-  
-  // Deploy initial AMM vaults
-  const vaultContractClass = 'SushiSwapAMM'
-  const pool = 'SUSHI_WMATIC_WETH';
-  const protocol = 'sushiswap';
+  // Deploy TeamWallet
+  const walletName = 'TeamWallet';
+  const TeamWallet = await ethers.getContractFactory(walletName);
+  const totalShares = ethers.utils.parseEther('1'); // 1e18
+  const shares = [
+    totalShares.div(2),
+    totalShares.div(2),
+  ];
+  const teamWallet = await upgrades.deployProxy(
+    TeamWallet,
+    [
+      team,
+      shares,
+      chains[network]!.admin.timelockOwner,
+    ],
+    {
+      kind: 'uups',
+    },
+  );
 
-  // TODO: Rather than deploying from scratch, use same beacon
+  // Block until deployed
+  await teamWallet.deployed();
 
-  await deployAMMVault(
-    vaultContractClass,
-    pool,
-    protocol,
+  // Verify contract and send to Etherscan
+  await verifyContract(await upgrades.erc1967.getImplementationAddress(teamWallet.address), []);
+
+  // Upload contract to Defender
+  await uploadContractToDefender({
+    network: network as PublicNetwork,
+    address: teamWallet.address,
+    name: walletName,
+    abi: TeamWallet.interface.format(FormatTypes.json)! as string
+});
+
+  // Log 
+  console.log(
+    `TeamWallet deployed to ${teamWallet.address}`
+  );
+
+  // Record the contract deployment in a lock file
+  recordDeployment(
+    walletName,
     network,
-    deploymentArgs(network, pool, chains[network]!.admin.timelockOwner, chains[network]!.admin.multiSigOwner),
-    [chains.matic!.infra.gaslessForwarder!],
+    teamWallet.address,
     basename(__filename)
   );
 }

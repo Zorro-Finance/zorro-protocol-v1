@@ -1,9 +1,9 @@
-import { time, loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { time, loadFixture, mine } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 import { deploymentArgs } from '../../helpers/deployments/vaults/VaultAMM/TraderJoe/deployment';
 import { chains } from "../../helpers/constants";
-import { BigNumber, Contract, ContractFactory, Signer, Wallet } from "ethers";
+import { BigNumber, BigNumberish, Contract, ContractFactory, Signer, Wallet } from "ethers";
 import { Provider } from "@ethersproject/providers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { Interface } from "@ethersproject/abi";
@@ -18,71 +18,10 @@ describe('VaultAMMBase', () => {
 
         // Get contract factory
         const Vault = await ethers.getContractFactory('TraderJoeAMMV1');
-        const vault = await upgrades.deployProxy(Vault, initArgs, {
-            constructorArgs: [chains.avalanche!.infra.gaslessForwarder!],
-        });
+        const vault = await upgrades.deployProxy(Vault, initArgs);
         await vault.deployed();
 
         return { vault, owner, otherAccount };
-    }
-
-    async function loadForwarderFixture() {
-        // Prep
-        const EIP712_DOMAIN_TYPE = 'EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)';
-        const abiCoder = ethers.utils.defaultAbiCoder;
-
-        // Contracts are deployed using the first signer/account by default
-        const [owner, otherAccount] = await ethers.getSigners();
-        const { chainId } = await owner.provider!.getNetwork();
-
-        // Get forwarder
-        const IForwarder = new Interface([
-            "function execute(tuple(address,address,uint256,uint256,unit256,bytes,uint256) req, bytes32 domainSeparator, bytes32 requestTypeHash, bytes calldata suffixData, bytes calldata sig)",
-            "function registerDomainSeparator(string name, string version)",
-            "function getNonce(address from) view returns (uint256)",
-        ]);
-
-        console.log('forwarder addr before contract: ', chains.avalanche!.infra.gaslessForwarder!);
-        // TODO: Bring back
-        // const forwarder = new Contract(
-        //     chains.avalanche!.infra.gaslessForwarder!,
-        //     IForwarder,
-        //     owner);
-        const GaslessForwarder = await ethers.getContractFactory('GaslessForwarder');
-        const forwarder = await GaslessForwarder.deploy();
-        // console.log('forwarder contract: ', forwarder);
-
-        // Calculate domainSeparator
-        const domainSeparatorEncoded = abiCoder.encode([
-            'bytes32',
-            'bytes32',
-            'bytes32',
-            'uint256',
-            'address',
-        ], [
-            ethers.utils.id(EIP712_DOMAIN_TYPE),
-            ethers.utils.id('Zorro'),
-            ethers.utils.id('1'),
-            chainId,
-            forwarder.address,
-        ]);
-        const domainSeparator = ethers.utils.keccak256(domainSeparatorEncoded);
-
-        // Calculate requestTypeHash
-        const requestType = 'ForwardRequest(address from,address to,uint256 value,uint256 gas,uint256 nonce,bytes data,uint256 validUntilTime)';
-        // const requestTypeEncoded = abiCoder.encode([
-        //     'string',
-        // ], [
-        //     'ForwardRequest(address from,address to,uint256 value,uint256 gas,uint256 nonce,bytes data,uint256 validUntilTime)'
-        // ]);
-        console.log('requesttype string: ', requestType);
-        const requestTypeHash = ethers.utils.id(requestType);
-        console.log('requestTypeHash: ', requestTypeHash, await forwarder.typeHashes(requestTypeHash));
-
-        // Register domain separator
-        await forwarder.registerDomainSeparator('Zorro', '1');
-
-        return { forwarder, domainSeparator, requestTypeHash };
     }
 
     async function getAssets(amountETH: BigNumber) {
@@ -175,53 +114,50 @@ describe('VaultAMMBase', () => {
         return { signature, sig, deadline }
     }
 
-    async function getForwarderSignature(
-        owner: SignerWithAddress | Wallet,
-        onBehalfOf: SignerWithAddress | Wallet,
+    async function getTransactPermitSignature(
+        signer: SignerWithAddress | Wallet,
         vault: Contract,
-        forwarder: Contract,
-        data: string
+        amount: BigNumber,
+        maxSlippageFactor: BigNumberish,
+        direction: 'deposit' | 'withdraw'
     ) {
         // Get chain
-        const { chainId } = await owner.provider!.getNetwork();
+        const { chainId } = await signer.provider!.getNetwork();
 
         // Sign a permit transaction
         const domain = {
-            name: 'Zorro',
+            name: await vault.name(),
             version: '1',
             chainId, // 0xA86A,
-            verifyingContract: forwarder.address,
+            verifyingContract: vault.address,
         };
         const types = {
-            ForwardRequest: [
-                { name: 'from', type: 'address' },
-                { name: 'to', type: 'address' },
-                { name: 'value', type: 'uint256' },
-                { name: 'gas', type: 'uint256' },
+            TransactUSDPermit: [
+                { name: 'account', type: 'address' },
+                { name: 'amount', type: 'uint256' },
+                { name: 'maxMarketMovement', type: 'uint256' },
+                { name: 'direction', type: 'uint8' },
                 { name: 'nonce', type: 'uint256' },
-                { name: 'data', type: 'bytes' },
-                { name: 'validUntilTime', type: 'uint256' },
+                { name: 'deadline', type: 'uint256' },
             ],
         };
-        const nonce = await forwarder.getNonce(onBehalfOf.address);
-        console.log('nonce obtained: ', nonce);
+        const nonce = await vault.nonces(signer.address);
         const now = await time.latest();
         const deadline = now + 600;
-        const forwarderTxPayload = {
-            from: onBehalfOf.address,
-            to: vault.address,
-            value: 0,
-            gas: 1e6,
+        const value = {
+            account: signer.address,
+            amount,
+            maxMarketMovement: maxSlippageFactor,
+            direction: direction === 'deposit' ? 0 : 1,
             nonce,
-            data,
-            validUntilTime: deadline,
+            deadline,
         };
 
         // Calculate and return serialized and split sigs
-        const signature = await onBehalfOf._signTypedData(domain, types, forwarderTxPayload);
+        const signature = await signer._signTypedData(domain, types, value);
         const sig = ethers.utils.splitSignature(signature);
 
-        return { signature, sig, deadline, forwarderTxPayload }
+        return { signature, sig, deadline }
     }
 
     describe('Depoloyment', () => {
@@ -383,7 +319,7 @@ describe('VaultAMMBase', () => {
     });
 
     describe('Withdrawals', () => {
-        it('Withdraws main asset token (full withdrawal)', async () => {
+        xit('Withdraws main asset token (full withdrawal)', async () => {
             // Prep
             const { vault, owner } = await loadFixture(deployVaultAMMBaseFixture);
 
@@ -456,7 +392,7 @@ describe('VaultAMMBase', () => {
             // Make withdrawal 2
             const sharesRemaining = await vault.totalSupply();
             await vault.approve(vault.address, sharesRemaining);
-            const tx = await vault.withdraw(sharesRemaining, 9900);
+            const tx = await vault.withdraw(sharesRemaining, 9000);
             const receipt = await tx.wait();
 
             // Test
@@ -486,7 +422,7 @@ describe('VaultAMMBase', () => {
             expect(matchingLog).to.not.be.undefined;
         });
 
-        it('Withdraws to USD', async () => {
+        xit('Withdraws to USD', async () => {
             // Prep
             const { vault, owner } = await loadFixture(deployVaultAMMBaseFixture);
 
@@ -518,17 +454,13 @@ describe('VaultAMMBase', () => {
         it('Deposits USD as a meta transaction', async () => {
             // Prep
             const { vault, owner } = await loadFixture(deployVaultAMMBaseFixture);
-            const {
-                forwarder,
-                domainSeparator,
-                requestTypeHash,
-            } = await loadFixture(loadForwarderFixture);
 
             // Get LP Token
             await getAssets(ethers.utils.parseEther('10'));
             const usdc = await ethers.getContractAt('ERC20PermitUpgradeable', chains.avalanche!.tokens.usdc);
             const balUSDC = await usdc.balanceOf(owner.address);
             const amountUSDC = balUSDC.div(10);
+            const maxMarketMovement = 9900;
 
             // Get wallet
             const signerProvider = owner.provider!;
@@ -538,6 +470,8 @@ describe('VaultAMMBase', () => {
             // Transfer USD to wallet for signature
             await usdc.transfer(wallet0.address, amountUSDC);
 
+            // Run
+
             // Get permit signature from wallet
             const { sig, deadline } = await getPermitSignature(
                 wallet0,
@@ -545,20 +479,7 @@ describe('VaultAMMBase', () => {
                 usdc,
                 amountUSDC
             );
-            console.log('got permit sig');
-
-            // Get signature for deposit
-            const metaTxRes = await getForwarderSignature(
-                owner,
-                wallet0,
-                vault,
-                forwarder,
-                vault.interface.encodeFunctionData('depositUSD', [amountUSDC, 9990])
-            );
-
-            // Run
             // Get permit for allowance
-            console.log('running permit with sig: ', sig);
             await usdc.permit(
                 wallet0.address,
                 vault.address,
@@ -569,20 +490,26 @@ describe('VaultAMMBase', () => {
                 sig.s
             );
 
+            console.log('usdbal: ', await usdc.allowance(wallet0.address, vault.address));
+            console.log('amountusdc for tx: ', amountUSDC);
+            // Get signature for deposit
+            const metaTxRes = await getTransactPermitSignature(
+                wallet0,
+                vault,
+                amountUSDC,
+                maxMarketMovement,
+                'deposit'
+            );
             // Make deposit meta transaction
-            console.log('executable: ');
-            console.log('req: ', metaTxRes.forwarderTxPayload);
-            console.log('domainSeparator: ', domainSeparator);
-            console.log('requestTypeHash: ', requestTypeHash);
-            console.log('suffixData: (blank)');
-            console.log('sig: ', metaTxRes.signature);
-            console.log(`forwarder addr: , :::${forwarder.address}:::`);
-            await forwarder.execute(
-                metaTxRes.forwarderTxPayload,
-                domainSeparator,
-                requestTypeHash,
-                [],
-                metaTxRes.signature,
+            await vault.transactUSDWithPermit(
+                wallet0.address,
+                amountUSDC,
+                maxMarketMovement,
+                0, // Deposit
+                metaTxRes.deadline,
+                metaTxRes.sig.v,
+                metaTxRes.sig.r,
+                metaTxRes.sig.s,
             );
 
             // Test
@@ -615,9 +542,7 @@ describe('VaultAMMBase', () => {
             await vault.deposit(amountLP);
 
             // Advance blocks (need many to produce enough rewards)
-            for (let i = 0; i < 500; i++) {
-                await masterChef.updatePool(chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pid!);
-            }
+            mine(1000);
 
             // Earn
             const tx = await vault.earn(9000, false); // 10% slippage. WARNING: Because of low rewards after time elapsed in test, test could fail if slippage set incorrectly

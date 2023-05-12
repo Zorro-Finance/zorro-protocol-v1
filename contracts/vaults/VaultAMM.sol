@@ -11,11 +11,6 @@ import "./_VaultAMMBase.sol";
 /// @title TraderJoeAMMV1
 /// @notice Vault based on TraderJoe V1 pool
 contract TraderJoeAMMV1 is VaultAMMBase {
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    /// @notice Constructor
-    /// @param _trustedForwarder Address of trusted forwarder contract
-    constructor(address _trustedForwarder) VaultBase(_trustedForwarder) {}
-
     function pendingRewards()
         public
         view
@@ -41,11 +36,6 @@ contract TraderJoeAMMV1 is VaultAMMBase {
 /// @title SushiSwapAMM
 /// @notice Vault based on TraderJoe V1 pool
 contract SushiSwapAMM is VaultAMMBase {
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    /// @notice Constructor
-    /// @param _trustedForwarder Address of trusted forwarder contract
-    constructor(address _trustedForwarder) VaultBase(_trustedForwarder) {}
-
     function pendingRewards()
         public
         view

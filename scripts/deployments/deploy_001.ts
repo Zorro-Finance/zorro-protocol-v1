@@ -1,6 +1,7 @@
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
+import {deploymentArgs} from '../../helpers/deployments/controllers/ControllerXChain/deployment';
 import { recordDeployment, uploadContractToDefender, verifyContract } from "../../helpers/deployments/utilities";
-import { basename } from 'path';
+import {basename} from 'path';
 import hre from 'hardhat';
 import { chains } from "../../helpers/constants";
 import { FormatTypes } from "@ethersproject/abi";
@@ -10,45 +11,43 @@ async function main() {
   // Init
   const network = hre.network.name as PublicNetwork;
 
-  // Check if forwarder contract exists on chain
-  const { gaslessForwarder } = chains[network]!.infra;
+  // Deploy XChain controller
+  const controllerName = 'ControllerXChain';
+  const Controller = await ethers.getContractFactory(controllerName);
+  const controller = await upgrades.deployProxy(
+    Controller,
+    deploymentArgs(network, chains[network]!.admin.timelockOwner),
+    {
+      kind: 'uups',
+    }
+  );
 
-  if (!gaslessForwarder) {
-    // Deploy Forwarder
-    const contractName = 'GaslessForwarder';
-    const GaslessForwarder = await ethers.getContractFactory(contractName);
-    const gaslessForwarderContract = await GaslessForwarder.deploy();
+  // Block until deployed
+  await controller.deployed();
 
-    // Block until deployed
-    await gaslessForwarderContract.deployed();
+  // Verify contract and send to Etherscan
+  await verifyContract(await upgrades.erc1967.getImplementationAddress(controller.address), []);
 
-    // Verify contract and send to Etherscan
-    await verifyContract(gaslessForwarderContract.address, []);
+  // Upload contract to Defender
+  await uploadContractToDefender({
+    network: network as PublicNetwork,
+    address: controller.address,
+    name: controllerName,
+    abi: Controller.interface.format(FormatTypes.json)! as string
+  });
 
-    // Upload contract to Defender
-    await uploadContractToDefender({
-      network: network as PublicNetwork,
-      address: gaslessForwarderContract.address,
-      name: contractName,
-      abi: GaslessForwarder.interface.format(FormatTypes.json)! as string
-    });
+  // Log 
+  console.log(
+    `ControllerXChain deployed to ${controller.address}`
+  );
 
-
-    // Log 
-    console.log(
-      `GaslessForwarder deployed to ${gaslessForwarderContract.address}`
-    );
-
-    // Record the contract deployment in a lock file
-    recordDeployment(
-      contractName,
-      network,
-      gaslessForwarderContract.address,
-      basename(__filename)
-    );
-  } else {
-    console.log(`Skipping deployment of GaslessForwarder. This chain already has a GSN forwarder at ${gaslessForwarder}`);
-  }
+  // Record the contract deployment in a lock file
+  recordDeployment(
+    controllerName,
+    network,
+    controller.address,
+    basename(__filename)
+  );
 }
 
 // We recommend this pattern to be able to use async/await everywhere

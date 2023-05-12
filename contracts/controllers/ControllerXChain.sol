@@ -12,7 +12,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import "@openzeppelin/contracts-upgradeable/metatx/ERC2771ContextUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
 
 import "../interfaces/Stargate/IStargateRouter.sol";
 
@@ -33,7 +33,7 @@ contract ControllerXChain is
     OwnableUpgradeable,
     ReentrancyGuardUpgradeable,
     UUPSUpgradeable,
-    ERC2771ContextUpgradeable
+    EIP712Upgradeable
 {
     /* Constants */
 
@@ -46,13 +46,6 @@ contract ControllerXChain is
     using LPUtility for IAMMRouter02;
 
     /* Constructor */
-
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    /// @notice Constructor
-    /// @param _trustedForwarder Address of trusted forwarder contract
-    constructor(
-        address _trustedForwarder
-    ) ERC2771ContextUpgradeable(_trustedForwarder) {}
 
     /// @notice Upgradeable constructor
     /// @param _initVal A ControllerXChainInit struct
@@ -132,32 +125,6 @@ contract ControllerXChain is
             "Unrecog xchain sender"
         );
         _;
-    }
-
-    /* Gasless implementation */
-
-    /// @dev Resolve ambiguity of two Context parents
-    /// @inheritdoc	ERC2771ContextUpgradeable
-    function _msgSender()
-        internal
-        view
-        virtual
-        override(ContextUpgradeable, ERC2771ContextUpgradeable)
-        returns (address sender)
-    {
-        return ERC2771ContextUpgradeable._msgSender();
-    }
-
-    /// @dev Resolve ambiguity of two Context parents
-    /// @inheritdoc	ERC2771ContextUpgradeable
-    function _msgData()
-        internal
-        view
-        virtual
-        override(ContextUpgradeable, ERC2771ContextUpgradeable)
-        returns (bytes calldata)
-    {
-        return ERC2771ContextUpgradeable._msgData();
     }
 
     /* Deposits */

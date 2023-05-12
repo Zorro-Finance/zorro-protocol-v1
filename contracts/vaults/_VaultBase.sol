@@ -14,8 +14,6 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/draft-ERC20PermitUpgradeable.sol";
 
-import "@openzeppelin/contracts-upgradeable/metatx/ERC2771ContextUpgradeable.sol";
-
 import "../interfaces/Zorro/vaults/IVault.sol";
 
 import "../libraries/PriceFeed.sol";
@@ -30,7 +28,6 @@ abstract contract VaultBase is
     PausableUpgradeable,
     ReentrancyGuardUpgradeable,
     ERC20PermitUpgradeable,
-    ERC2771ContextUpgradeable,
     IVault
 {
     /* Constants */
@@ -44,13 +41,6 @@ abstract contract VaultBase is
     using SafeSwapUni for IAMMRouter02;
 
     /* Constructor */
-
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    /// @notice Constructor
-    /// @param _trustedForwarder Address of trusted forwarder contract
-    constructor(
-        address _trustedForwarder
-    ) ERC2771ContextUpgradeable(_trustedForwarder) {}
 
     /// @notice Upgradeable constructor
     /// @param _initVal A VaultInit struct
@@ -101,6 +91,9 @@ abstract contract VaultBase is
     mapping(address => mapping(address => address[])) public swapPaths; // Swap paths. Mapping: start address => end address => address array describing swap path
     mapping(address => mapping(address => uint16)) public swapPathLength; // Swap path lengths. Mapping: start address => end address => path length
     mapping(address => AggregatorV3Interface) public priceFeeds; // Price feeds. Mapping: token address => price feed address (AggregatorV3Interface implementation)
+
+    // Gasless
+    mapping(address => CountersUpgradeable.Counter) private _nonces;
 
     /* Modifiers */
 
@@ -181,20 +174,6 @@ abstract contract VaultBase is
     /// @param _gov The address for the governor
     function setGov(address _gov) external onlyOwner {
         gov = _gov;
-    }
-
-    /* Gasless implementation */
-
-    /// @dev Resolve ambiguity of two Context parents
-    /// @inheritdoc	ERC2771ContextUpgradeable
-    function _msgSender() internal view virtual override(ContextUpgradeable, ERC2771ContextUpgradeable) returns (address sender) {
-        return ERC2771ContextUpgradeable._msgSender();
-    }
-
-    /// @dev Resolve ambiguity of two Context parents
-    /// @inheritdoc	ERC2771ContextUpgradeable
-    function _msgData() internal view virtual override(ContextUpgradeable, ERC2771ContextUpgradeable) returns (bytes calldata) {
-        return ERC2771ContextUpgradeable._msgData();
     }
 
     /* Maintenance Functions */

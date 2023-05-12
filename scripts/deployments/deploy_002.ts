@@ -1,51 +1,30 @@
-import { ethers, upgrades } from "hardhat";
-import {deploymentArgs} from '../../helpers/deployments/controllers/ControllerXChain/deployment';
-import { recordDeployment, uploadContractToDefender, verifyContract } from "../../helpers/deployments/utilities";
-import {basename} from 'path';
+import { deploymentArgs } from '../../helpers/deployments/vaults/VaultAMM/TraderJoe/deployment';
+import { deployAMMVault } from "../../helpers/deployments/utilities";
 import hre from 'hardhat';
 import { chains } from "../../helpers/constants";
-import { FormatTypes } from "@ethersproject/abi";
-import { PublicNetwork } from "../../helpers/types";
+import { basename } from 'path';
+import { PublicNetwork } from '../../helpers/types';
 
 async function main() {
   // Init
   const network = hre.network.name as PublicNetwork;
 
-  // Deploy XChain controller
-  const controllerName = 'ControllerXChain';
-  const Controller = await ethers.getContractFactory(controllerName);
-  const controller = await upgrades.deployProxy(
-    Controller,
-    deploymentArgs(network, chains[network]!.admin.timelockOwner),
-    {
-      kind: 'uups',
-    }
-  );
+  // Network check
+  if (network !== 'avalanche') {
+    return;
+  }
 
-  // Block until deployed
-  await controller.deployed();
+  // Deploy initial AMM vaults
+  const vaultContractClass = 'TraderJoeAMMV1';
+  const pool = 'TJ_AVAX_USDC';
+  const protocol = 'traderjoe';
 
-  // Verify contract and send to Etherscan
-  await verifyContract(await upgrades.erc1967.getImplementationAddress(controller.address), []);
-
-  // Upload contract to Defender
-  await uploadContractToDefender({
-    network: network as PublicNetwork,
-    address: controller.address,
-    name: controllerName,
-    abi: Controller.interface.format(FormatTypes.json)! as string
-  });
-
-  // Log 
-  console.log(
-    `ControllerXChain deployed to ${controller.address}`
-  );
-
-  // Record the contract deployment in a lock file
-  recordDeployment(
-    controllerName,
+  await deployAMMVault(
+    vaultContractClass,
+    pool,
+    protocol,
     network,
-    controller.address,
+    deploymentArgs(network, pool, chains[network]!.admin.timelockOwner, chains[network]!.admin.multiSigOwner),
     basename(__filename)
   );
 }
