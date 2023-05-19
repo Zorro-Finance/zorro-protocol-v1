@@ -76,7 +76,6 @@ export const deployAMMVault = async (
 ) => {
     // Deploy initial AMM vaults
     const Vault = await ethers.getContractFactory(vaultContractClass);
-    // TODO: Create tests for forwarding
 
     // Deploy beacon contract
     const beacon = await upgrades.deployBeacon(Vault);

@@ -3,10 +3,8 @@ import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 import { deploymentArgs } from '../../helpers/deployments/vaults/VaultAMM/TraderJoe/deployment';
 import { chains } from "../../helpers/constants";
-import { BigNumber, BigNumberish, Contract, ContractFactory, Signer, Wallet } from "ethers";
-import { Provider } from "@ethersproject/providers";
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { Interface } from "@ethersproject/abi";
+import { BigNumber } from "ethers";
+import { getPermitSignature, getTransactPermitSignature } from "../../helpers/tests/metatx";
 
 describe('VaultAMMBase', () => {
     async function deployVaultAMMBaseFixture() {
@@ -68,96 +66,6 @@ describe('VaultAMMBase', () => {
             (await time.latest()) + 120,
             { value: amountAVAXIn }
         );
-    }
-
-    async function getPermitSignature(
-        owner: SignerWithAddress | Wallet,
-        spender: string,
-        token: Contract,
-        amount: BigNumber,
-        version: string,
-    ) {
-        // Get chain
-        const { chainId } = await owner.provider!.getNetwork();
-
-        // Sign a permit transaction
-        const domain = {
-            name: await token.name(),
-            version,
-            chainId, // 0xA86A,
-            verifyingContract: token.address,
-        };
-        const types = {
-            Permit: [
-                { name: 'owner', type: 'address' },
-                { name: 'spender', type: 'address' },
-                { name: 'value', type: 'uint256' },
-                { name: 'nonce', type: 'uint256' },
-                { name: 'deadline', type: 'uint256' },
-            ],
-        };
-        const nonce = await token.nonces(owner.address);
-        const now = await time.latest();
-        const deadline = now + 600;
-        const value = {
-            owner: owner.address,
-            spender,
-            value: amount,
-            nonce,
-            deadline,
-        };
-
-        // Calculate and return serialized and split sigs
-        const signature = await owner._signTypedData(domain, types, value);
-        const sig = ethers.utils.splitSignature(signature);
-
-        return { signature, sig, deadline }
-    }
-
-    async function getTransactPermitSignature(
-        signer: SignerWithAddress | Wallet,
-        vault: Contract,
-        amount: BigNumber,
-        maxSlippageFactor: BigNumberish,
-        direction: 'deposit' | 'withdraw'
-    ) {
-        // Get chain
-        const { chainId } = await signer.provider!.getNetwork();
-
-        // Sign a permit transaction
-        const domain = {
-            name: await vault.name(),
-            version: '1',
-            chainId, // 0xA86A,
-            verifyingContract: vault.address,
-        };
-        const types = {
-            TransactUSDPermit: [
-                { name: 'account', type: 'address' },
-                { name: 'amount', type: 'uint256' },
-                { name: 'maxMarketMovement', type: 'uint256' },
-                { name: 'direction', type: 'uint8' },
-                { name: 'nonce', type: 'uint256' },
-                { name: 'deadline', type: 'uint256' },
-            ],
-        };
-        const nonce = await vault.nonces(signer.address);
-        const now = await time.latest();
-        const deadline = now + 600;
-        const value = {
-            account: signer.address,
-            amount,
-            maxMarketMovement: maxSlippageFactor,
-            direction: direction === 'deposit' ? 0 : 1,
-            nonce,
-            deadline,
-        };
-
-        // Calculate and return serialized and split sigs
-        const signature = await signer._signTypedData(domain, types, value);
-        const sig = ethers.utils.splitSignature(signature);
-
-        return { signature, sig, deadline }
     }
 
     describe('Depoloyment', () => {

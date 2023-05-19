@@ -167,8 +167,6 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         if (token0 != stablecoin) {
             IAMMRouter02(router).safeSwap(
                 _balUSD / 2,
-                stablecoin,
-                token0,
                 swapPaths[stablecoin][token0],
                 priceFeeds[stablecoin],
                 priceFeeds[token0],
@@ -180,8 +178,6 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         if (token1 != stablecoin) {
             IAMMRouter02(router).safeSwap(
                 _balUSD / 2,
-                stablecoin,
-                token1,
                 swapPaths[stablecoin][token1],
                 priceFeeds[stablecoin],
                 priceFeeds[token1],
@@ -347,8 +343,6 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         if (token0 != stablecoin) {
             IAMMRouter02(router).safeSwap(
                 _balToken0,
-                token0,
-                stablecoin,
                 swapPaths[token0][stablecoin],
                 priceFeeds[token0],
                 priceFeeds[stablecoin],
@@ -359,8 +353,6 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         if (token1 != stablecoin) {
             IAMMRouter02(router).safeSwap(
                 _balToken1,
-                token1,
-                stablecoin,
                 swapPaths[token1][stablecoin],
                 priceFeeds[token1],
                 priceFeeds[stablecoin],
@@ -520,8 +512,6 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
             if (rewardsToken != token0) {
                 IAMMRouter02(router).safeSwap(
                     _balReward / 2,
-                    rewardsToken,
-                    token0,
                     swapPaths[rewardsToken][token0],
                     priceFeeds[rewardsToken],
                     priceFeeds[token0],
@@ -532,8 +522,6 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
             if (rewardsToken != token1) {
                 IAMMRouter02(router).safeSwap(
                     _balReward / 2,
-                    rewardsToken,
-                    token1,
                     swapPaths[rewardsToken][token1],
                     priceFeeds[rewardsToken],
                     priceFeeds[token1],

@@ -12,9 +12,11 @@ import "./PriceFeed.sol";
 
 import "../interfaces/Uniswap/IAMMRouter02.sol";
 
-/// @title SafeSwapUni
-/// @notice Library for safe swapping of ERC20 tokens for Uniswap/Pancakeswap style protocols
-library SafeSwapUni {
+import "../interfaces/TraderJoe/IJoeRouter02.sol";
+
+/// @title SafeSwapUniETH
+/// @notice Library for safe swapping of ERC20 tokens to ETH for Uniswap/Pancakeswap style protocols
+library SafeSwapUniETH {
     /* Libraries */
 
     using PriceFeed for AggregatorV3Interface;
@@ -22,18 +24,18 @@ library SafeSwapUni {
 
     /* Functions */
 
-    /// @notice Safely swaps from one token to another
+    /// @notice Safely swaps from one token to exact ETH amount desired
     /// @dev Tries to use a Chainlink price feed oracle if one exists
     /// @param _uniRouter Uniswap V2 router
-    /// @param _amountIn The quantity of the origin token to swap
-    /// @param _swapPath The array of tokens representing the swap path
+    /// @param _amountOutETH The exact quantity of ETH to be obtained
+    /// @param _swapPath The array of tokens representing the swap path. Last element MUST be WETH.
     /// @param _priceFeedStart The Chainlink compatible price feed of the start token
     /// @param _priceFeedEnd The Chainlink compatible price feed of the end token
     /// @param _maxSlippageFactor The max slippage factor tolerated (9900 = 1%)
     /// @param _destination Where to send the swapped token to
-    function safeSwap(
-        IAMMRouter02 _uniRouter,
-        uint256 _amountIn,
+    function safeSwapToETH(
+        address _uniRouter,
+        uint256 _amountOutETH,
         address[] memory _swapPath,
         AggregatorV3Interface _priceFeedStart,
         AggregatorV3Interface _priceFeedEnd,
@@ -46,21 +48,15 @@ library SafeSwapUni {
             uint8[] memory _decimals
         ) = _preparePriceData(
                 _swapPath[0],
-                _swapPath[_swapPath.length-1],
+                _swapPath[_swapPath.length - 1],
                 _priceFeedStart,
                 _priceFeedEnd
             );
 
-        // Safe transfer
-        IERC20Upgradeable(_swapPath[0]).safeIncreaseAllowance(
-            address(_uniRouter),
-            _amountIn
-        );
-
         // Perform swap
-        _safeSwap(
+        _safeSwapToETH(
             _uniRouter,
-            _amountIn,
+            _amountOutETH,
             _priceTokens,
             _maxSlippageFactor,
             _swapPath,
@@ -72,16 +68,16 @@ library SafeSwapUni {
 
     /// @notice Internal function for safely swapping tokens (lower level than above func)
     /// @param _uniRouter Uniswap V2 router
-    /// @param _amountIn The quantity of the origin token to swap
+    /// @param _amountOutETH The exact quantity of ETH to obtain
     /// @param _priceTokens Array of prices of tokenIn in USD, times 1e12, then tokenOut
     /// @param _slippageFactor The maximum slippage factor tolerated for this swap
     /// @param _path The path to take for the swap
     /// @param _decimals The number of decimals for _amountIn, _amountOut
     /// @param _to The destination to send the swapped token to
     /// @param _deadline How much time to allow for the transaction
-    function _safeSwap(
-        IAMMRouter02 _uniRouter,
-        uint256 _amountIn,
+    function _safeSwapToETH(
+        address _uniRouter,
+        uint256 _amountOutETH,
         uint256[] memory _priceTokens,
         uint256 _slippageFactor,
         address[] memory _path,
@@ -92,12 +88,12 @@ library SafeSwapUni {
         // Requirements
         require(_decimals.length == 2, "invalid dec");
         require(_path[0] != _path[_path.length - 1], "same token swap");
-        require(_amountIn > 0, "amountIn zero");
+        require(_amountOutETH > 0, "amountOutETH zero");
 
-        // Get min amount OUT
-        uint256 _amountOut = _getAmountOut(
+        // Get max amount IN
+        uint256 _amountInMax = _getAmountIn(
             _uniRouter,
-            _amountIn,
+            _amountOutETH,
             _path,
             _decimals,
             _priceTokens,
@@ -105,16 +101,38 @@ library SafeSwapUni {
         );
 
         // Safety
-        require(_amountOut > 0, "amountOut zero");
+        uint256 _balIn = IERC20Upgradeable(_path[0]).balanceOf(address(this));
+        require(_amountInMax <= _balIn, "amountIn exceeds balance");
+
+        // Allowance
+        IERC20Upgradeable(_path[0]).safeIncreaseAllowance(
+            address(_uniRouter),
+            _amountInMax
+        );
 
         // Perform swap
-        _uniRouter.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-            _amountIn,
-            _amountOut,
-            _path,
-            _to,
-            _deadline
-        );
+        
+        // Match router based on current chain Id
+        // TODO: Make sure this is exhaustive (PCS, Polygon, etc.)
+        if (block.chainid == 0xa86a) {
+            // Avalanche
+            IJoeRouter02(_uniRouter).swapTokensForExactAVAX(
+                _amountOutETH,
+                _amountInMax,
+                _path,
+                _to,
+                _deadline
+            );
+        } else {
+            // Generic router (Uniswap)
+            IAMMRouter02(_uniRouter).swapTokensForExactETH(
+                _amountOutETH,
+                _amountInMax,
+                _path,
+                _to,
+                _deadline
+            );
+        }
     }
 
     /// @notice Prepares token price data by attempting to use price feed oracle
@@ -156,18 +174,18 @@ library SafeSwapUni {
         decimals[1] = ERC20Upgradeable(_endToken).decimals();
     }
 
-    /// @notice Calculate min amount out (account for slippage)
+    /// @notice Calculate max amount IN (account for slippage)
     /// @dev Tries to calculate based on price feed oracle if present, or via the AMM router
     /// @param _uniRouter Uniswap V2 router
-    /// @param _amountIn The quantity of the origin token to swap
+    /// @param _amountOutETH The exact quantity of ETH to receive
     /// @param _path The path to take for the swap
     /// @param _decimals The number of decimals for _amountIn, _amountOut
     /// @param _priceTokens Array of prices of tokenIn in USD, times 1e12, then tokenOut
     /// @param _slippageFactor The maximum slippage factor tolerated for this swap
     /// @return amountOut Minimum amount of output token to expect
-    function _getAmountOut(
-        IAMMRouter02 _uniRouter,
-        uint256 _amountIn,
+    function _getAmountIn(
+        address _uniRouter,
+        uint256 _amountOutETH,
         address[] memory _path,
         uint8[] memory _decimals,
         uint256[] memory _priceTokens,
@@ -175,16 +193,15 @@ library SafeSwapUni {
     ) private view returns (uint256 amountOut) {
         if (_priceTokens[0] == 0 || _priceTokens[1] == 0) {
             // If no exchange rates provided, use on-chain functions provided by router (not ideal)
-            amountOut = _getAmountOutWithoutExchangeRates(
+            amountOut = _getAmountInWithoutExchangeRates(
                 _uniRouter,
-                _amountIn,
+                _amountOutETH,
                 _path,
-                _slippageFactor,
-                _decimals
+                _slippageFactor
             );
         } else {
-            amountOut = _getAmountOutWithExchangeRates(
-                _amountIn,
+            amountOut = _getAmountInWithExchangeRates(
+                _amountOutETH,
                 _priceTokens[0],
                 _priceTokens[1],
                 _slippageFactor,
@@ -194,43 +211,45 @@ library SafeSwapUni {
     }
 
     /// @notice Gets amounts out using provided exchange rates
-    /// @param _amountIn The quantity of tokens as input to the swap
+    /// @param _amountOutETH The exact quantity of ETH to receive
     /// @param _priceTokenIn Price of input token in USD, quoted in the number of decimals of the price feed
     /// @param _priceTokenOut Price of output token in USD, quoted in the number of decimals of the price feed
     /// @param _slippageFactor Slippage tolerance (9900 = 1%)
     /// @param _decimals Array (length 2) of decimal of price feed for each token
-    /// @return amountOut The quantity of tokens expected to receive as output
-    function _getAmountOutWithExchangeRates(
-        uint256 _amountIn,
+    /// @return amountIn The quantity of tokens expected to be sent as input
+    function _getAmountInWithExchangeRates(
+        uint256 _amountOutETH,
         uint256 _priceTokenIn,
         uint256 _priceTokenOut,
         uint256 _slippageFactor,
         uint8[] memory _decimals
-    ) internal pure returns (uint256 amountOut) {
-        amountOut =
-            (_amountIn * _priceTokenIn * _slippageFactor * 10 ** _decimals[1]) /
-            (10000 * _priceTokenOut * 10 ** _decimals[0]);
+    ) internal pure returns (uint256 amountIn) {
+        amountIn =
+            (_amountOutETH *
+                _priceTokenOut *
+                10000 *
+                10 ** _decimals[0]) /
+            (_slippageFactor * _priceTokenIn * 10 ** _decimals[1]);
     }
 
-    /// @notice Gets amounts out when exchange rates are not provided (uses router)
+    /// @notice Gets amounts in when exchange rates are not provided (uses router)
     /// @param _uniRouter The Uniswap V2 compatible router
-    /// @param _amountIn The quantity of tokens as input to the swap
+    /// @param _amountOutETH The exact quantity of ETH to receive
     /// @param _path Array of tokens representing the swap path from input to output token
     /// @param _slippageFactor Slippage tolerance (9900 = 1%)
-    /// @param _decimals Array (length 2) of decimal of price feed for each token
-    /// @return amountOut The quantity of tokens expected to receive as output
-    function _getAmountOutWithoutExchangeRates(
-        IAMMRouter02 _uniRouter,
-        uint256 _amountIn,
+    /// @return amountIn The quantity of tokens expected to be sent as input
+    function _getAmountInWithoutExchangeRates(
+        address _uniRouter,
+        uint256 _amountOutETH,
         address[] memory _path,
-        uint256 _slippageFactor,
-        uint8[] memory _decimals
-    ) internal view returns (uint256 amountOut) {
-        uint256[] memory amounts = _uniRouter.getAmountsOut(_amountIn, _path);
-        amountOut =
-            (amounts[amounts.length - 1] *
-                _slippageFactor *
-                10 ** _decimals[1]) /
-            (10000 * (10 ** _decimals[0]));
+        uint256 _slippageFactor
+    ) internal view returns (uint256 amountIn) {
+        uint256[] memory amounts = IAMMRouter02(_uniRouter).getAmountsIn(
+            _amountOutETH,
+            _path
+        );
+        amountIn = (amounts[0] * 10000) / _slippageFactor;
     }
 }
+
+// TODO take a close look on both getAmountOut (other lib) and getAmountIn. 

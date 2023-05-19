@@ -9,7 +9,9 @@ const contractInits: ContractInitList<ControllerXChainInit> = {
         sgPoolId: chains.avalanche!.xChain.sgPoolId,
         router: chains.avalanche!.infra.uniRouterAddress,
         stablecoin: chains.avalanche!.tokens.usdc,
+        tokenWETH: chains.avalanche!.tokens.wavax,
         stablecoinPriceFeed: chains.avalanche!.priceFeeds.usdc,
+        ethPriceFeed: chains.avalanche!.priceFeeds.avax,
     },
     matic: {
         layerZeroEndpoint: chains.matic!.infra.layerZeroEndpoint,
@@ -18,7 +20,9 @@ const contractInits: ContractInitList<ControllerXChainInit> = {
         sgPoolId: chains.matic!.xChain.sgPoolId,
         router: chains.matic!.infra.uniRouterAddress,
         stablecoin: chains.matic!.tokens.usdc,
+        tokenWETH: chains.matic!.tokens.wmatic,
         stablecoinPriceFeed: chains.matic!.priceFeeds.usdc,
+        ethPriceFeed: chains.matic!.priceFeeds.matic,
     },
 };
 
