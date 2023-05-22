@@ -10,6 +10,8 @@ import "./_VaultBase.sol";
 
 import "../libraries/LPUtility.sol";
 
+import "../libraries/SafeSwapETH.sol";
+
 /// @title VaultAMMBase
 /// @notice Abstract base contract for standard AMM based vaults
 abstract contract VaultAMMBase is VaultBase, IVaultAMM {
@@ -22,7 +24,9 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
     /* Constants */
 
     bytes32 private constant _PERMIT_TRANSACT_USD_TYPEHASH =
-        keccak256("TransactUSDPermit(address account,uint256 amount,uint256 maxMarketMovement,uint8 direction,uint256 nonce,uint256 deadline)");
+        keccak256(
+            "TransactUSDPermit(address account,uint256 amount,uint256 maxMarketMovement,uint8 direction,uint256 nonce,uint256 deadline)"
+        );
 
     /* Constructor */
 
@@ -39,6 +43,7 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         asset = _initVal.asset;
         token0 = _initVal.token0;
         token1 = _initVal.token1;
+        WETH = _initVal.tokenWETH;
         farmContract = _initVal.farmContract;
         rewardsToken = _initVal.rewardsToken;
         isFarmable = _initVal.isFarmable;
@@ -56,6 +61,7 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         // Set price feeds
         _setPriceFeed(token0, _initVal.priceFeeds.token0);
         _setPriceFeed(token1, _initVal.priceFeeds.token1);
+        _setPriceFeed(WETH, _initVal.priceFeeds.eth);
         _setPriceFeed(stablecoin, _initVal.priceFeeds.stablecoin);
         _setPriceFeed(rewardsToken, _initVal.priceFeeds.rewards);
 
@@ -73,6 +79,7 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
     address public asset;
     address public token0;
     address public token1;
+    address public WETH;
     address public farmContract;
     address public rewardsToken;
     bool public isFarmable;
@@ -85,16 +92,19 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
     /// @param _asset The main asset token
     /// @param _token0 The first token of the LP pair for this contract
     /// @param _token1 The second token of the LP pair for this contract
+    /// @param _weth Wrapped ETH token (equivalent native token (e.g. WAVAX, WBNB etc.))
     /// @param _pool The LP pair address
     function setTokens(
         address _asset,
         address _token0,
         address _token1,
+        address _weth,
         address _pool
     ) external onlyOwner {
         asset = _asset;
         token0 = _token0;
         token1 = _token1;
+        WETH = _weth;
         pool = _pool;
     }
 
@@ -139,17 +149,27 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         uint256 _maxSlippageFactor
     ) external {
         // Call internal deposit func
-        _depositUSD(_amountUSD, _maxSlippageFactor, _msgSender());
+        _depositUSD(
+            _amountUSD,
+            _maxSlippageFactor,
+            _msgSender(),
+            0, // No relay reimbursement needed as this is not a permit deposit
+            address(0) // Dummy address for reimbursement (see above)
+        );
     }
 
     /// @notice Internal function for depositing USD
     /// @param _amountUSD Amount of USD to deposit
     /// @param _maxSlippageFactor Max slippage tolerant (9900 = 1%)
     /// @param _account Where to draw USD funds from
+    /// @param _relayFee Gas that needs to be compensated to relayer. Set to 0 if n/a
+    /// @param _relayer Where to send gas compensation
     function _depositUSD(
         uint256 _amountUSD,
         uint256 _maxSlippageFactor,
-        address _account
+        address _account,
+        uint256 _relayFee,
+        address _relayer
     ) internal nonReentrant {
         // Safe transfer IN USD*
         IERC20Upgradeable(stablecoin).safeTransferFrom(
@@ -157,6 +177,11 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
             address(this),
             _amountUSD
         );
+
+        // Convert USD to native ETH for gas + xc tx and refund relayer (if applicable)
+        if (_relayFee > 0) {
+            _recoupXCFeeFromUSD(_relayFee, _relayer);
+        }
 
         // Get balance of USD
         uint256 _balUSD = IERC20Upgradeable(stablecoin).balanceOf(
@@ -207,7 +232,6 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         uint256 _sharesAdded = _deposit(_balLPToken, _account);
 
         // Emit log
-        // TODO: Consider including account too
         emit DepositUSD(pool, _amountUSD, _sharesAdded, _maxSlippageFactor);
     }
 
@@ -271,9 +295,7 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
     }
 
     /// @inheritdoc	IVaultAMM
-    function withdraw(
-        uint256 _shares
-    ) external nonReentrant {
+    function withdraw(uint256 _shares) external nonReentrant {
         // Safe Transfer share tokens IN
         IERC20Upgradeable(address(this)).safeTransferFrom(
             _msgSender(),
@@ -282,32 +304,30 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         );
 
         // Call core withdrawal function
-        (uint256 _amountWithdrawn) = _withdraw(
-            _shares,
-            _msgSender()
-        );
+        uint256 _amountWithdrawn = _withdraw(_shares, _msgSender());
 
         // Emit log
         emit WithdrawAsset(pool, _shares, _amountWithdrawn);
     }
 
     /// @inheritdoc	IVault
-    function withdrawUSD(
-        uint256 _shares,
-        uint256 _maxSlippageFactor
-    ) external {
+    function withdrawUSD(uint256 _shares, uint256 _maxSlippageFactor) external {
         // Call internal withdrawal function
-        _withdrawUSD(_shares, _maxSlippageFactor, _msgSender());
+        _withdrawUSD(_shares, _maxSlippageFactor, _msgSender(), 0, address(0));
     }
 
     /// @notice Internal function for USD withdrawals
     /// @param _shares The number of shares to withdraw
     /// @param _maxSlippageFactor Slippage tolerance (9900 = 1%)
     /// @param _account The account holding the shares to withdraw
+    /// @param _relayFee Gas that needs to be compensated to relayer. Set to 0 if n/a
+    /// @param _relayer Where to send gas compensation
     function _withdrawUSD(
         uint256 _shares,
         uint256 _maxSlippageFactor,
-        address _account
+        address _account,
+        uint256 _relayFee,
+        address _relayer
     ) internal nonReentrant {
         // Safe Transfer share tokens IN
         IERC20Upgradeable(address(this)).safeTransferFrom(
@@ -317,10 +337,7 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         );
 
         // Call core withdrawal function
-        _withdraw(
-            _shares,
-            address(this)
-        );
+        _withdraw(_shares, address(this));
 
         // Get balance of main asset token and reward token
         uint256 _balAsset = IERC20Upgradeable(asset).balanceOf(address(this));
@@ -362,20 +379,26 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         }
 
         // Get balances of USD*
-        uint256 _balUSD = IERC20Upgradeable(stablecoin).balanceOf(
+        uint256 _remainingUSD = IERC20Upgradeable(stablecoin).balanceOf(
             address(this)
         );
 
+        // Reimburse fee (if applicable)
+        if (_relayFee > 0) {
+            // Recoup from USD balance
+            _recoupXCFeeFromUSD(_relayFee, _relayer);
+
+            // Update remaining USD for withdrawal
+            _remainingUSD = IERC20Upgradeable(stablecoin).balanceOf(
+                address(this)
+            );
+        }
+
         // Transfer USD*
-        IERC20Upgradeable(stablecoin).safeTransfer(_account, _balUSD);
+        IERC20Upgradeable(stablecoin).safeTransfer(_account, _remainingUSD);
 
         // Emit log
-        emit WithdrawUSD(
-            pool,
-            _balUSD,
-            _shares,
-            _maxSlippageFactor
-        );
+        emit WithdrawUSD(pool, _remainingUSD, _shares, _maxSlippageFactor);
     }
 
     /// @notice Core withdrawal function
@@ -386,17 +409,12 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
     function _withdraw(
         uint256 _shares,
         address _destination
-    )
-        internal
-        virtual
-        whenNotPaused
-        returns (uint256 amountAsset)
-    {
+    ) internal virtual whenNotPaused returns (uint256 amountAsset) {
         // Preflight checks
         require(_shares > 0, "negShares");
 
         // Attempt to run earn(). Sometimes it will fail due to not enough rewards being accumulated since last earn, and this is ok.
-        try this.earn() {} catch  {
+        try this.earn() {} catch {
             emit VaultAMMFailedEarn();
         }
 
@@ -460,19 +478,24 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         bytes32 _r,
         bytes32 _s
     ) external whenNotPaused {
+        // Init
+        uint256 _startGas = gasleft();
+
         // Check deadline
         require(block.timestamp <= _deadline, "ZorroVault: expired deadline");
 
         // Calculate hash of typed data
-        bytes32 _structHash = keccak256(abi.encode(
-            _PERMIT_TRANSACT_USD_TYPEHASH, 
-            _account,
-            _amount,
-            _maxSlippageFactor,
-            _direction,
-            _useNonce(_account), 
-            _deadline
-        ));
+        bytes32 _structHash = keccak256(
+            abi.encode(
+                _PERMIT_TRANSACT_USD_TYPEHASH,
+                _account,
+                _amount,
+                _maxSlippageFactor,
+                _direction,
+                _useNonce(_account),
+                _deadline
+            )
+        );
         bytes32 _hash = _hashTypedDataV4(_structHash);
 
         // Extract signer from signature
@@ -484,13 +507,34 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         // Allow transaction through
         if (_direction == 0) {
             // Deposit
-            _depositUSD(_amount, _maxSlippageFactor, _account);
+            _depositUSD(_amount, _maxSlippageFactor, _account, _startGas * tx.gasprice, _msgSender());
         } else if (_direction == 1) {
             // Withdraw
-            _withdrawUSD(_amount, _maxSlippageFactor, _account);
+            _withdrawUSD(_amount, _maxSlippageFactor, _account, _startGas * tx.gasprice, _msgSender());
         } else {
             revert("ZorroVault: invalid dir");
         }
+    }
+
+    /// @notice Swaps USD to ETH to compensate relayer for XC fee spent
+    /// @param _fee The amount of ETH used for the XC fee
+    /// @param _relayer The address of the relayer to compensate
+    function _recoupXCFeeFromUSD(uint256 _fee, address _relayer) internal {
+        // Prep swap path
+        address[] memory _swapPath = new address[](2);
+        _swapPath[0] = stablecoin;
+        _swapPath[1] = WETH;
+
+        // Swap USD to ETH to the relayer
+        SafeSwapUniETH.safeSwapToETH(
+            router,
+            _fee,
+            _swapPath,
+            priceFeeds[stablecoin],
+            priceFeeds[WETH],
+            defaultSlippageFactor,
+            _relayer
+        );
     }
 
     /// @notice Harvests farm token and reinvests earnings

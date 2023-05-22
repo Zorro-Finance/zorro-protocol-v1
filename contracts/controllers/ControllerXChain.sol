@@ -28,8 +28,6 @@ import "../libraries/SafeSwap.sol";
 
 import "../libraries/SafeSwapETH.sol";
 
-// TODO: Make pausable
-
 /// @title ControllerXChain
 /// @notice Controls all cross chain operations
 contract ControllerXChain is
@@ -80,9 +78,7 @@ contract ControllerXChain is
         stablecoinPriceFeed = AggregatorV3Interface(
             _initVal.stablecoinPriceFeed
         );
-        ethPriceFeed = AggregatorV3Interface(
-            _initVal.ethPriceFeed
-        );
+        ethPriceFeed = AggregatorV3Interface(_initVal.ethPriceFeed);
 
         defaultSlippageFactor = 9900;
 
@@ -246,29 +242,41 @@ contract ControllerXChain is
                 amount: _amountUSD,
                 slippageFactor: _slippageFactor,
                 dstGasForCall: _dstGasForCall,
-                feeToReimburse: msg.value,
+                feeToReimburse: 0, // Not sent from a meta TX relayer so no reimbursement required
                 refundAddress: _msgSender()
-            })
+            }),
+            msg.value
         );
     }
 
     /// @dev Internal function for executing a cross chain deposit
     /// @param _req An XCRequest struct that describes the cross chain request parameters
-    function _sendDepositRequest(
-        XCRequest memory _req
-    ) internal {
+    /// @param _xcFee Stargate native fee for XC bridging
+    function _sendDepositRequest(XCRequest memory _req, uint256 _xcFee) internal {
         // Require funds to be submitted with this message
         require(_req.amount > 0, "No USD submitted");
 
+
         // Check balances
-        uint256 _balUSD = IERC20Upgradeable(stablecoin).balanceOf(
+        uint256 _remainingUSD = IERC20Upgradeable(stablecoin).balanceOf(
             address(this)
         );
+
+        // Reimburse fees if necessary
+        if (_req.feeToReimburse > 0) {
+            // Convert USD to native ETH for gas + xc tx and refund relayer
+            _recoupXCFeeFromUSD(_req.feeToReimburse, _req.refundAddress);
+
+            // Update amount remaining
+            _remainingUSD = IERC20Upgradeable(stablecoin).balanceOf(
+                address(this)
+            );
+        }
 
         // Generate payload
         bytes memory _payload = this.encodeDepositRequest(
             _req.vault,
-            _balUSD,
+            _remainingUSD,
             _req.slippageFactor,
             _req.dstWallet
         );
@@ -278,13 +286,13 @@ contract ControllerXChain is
             StargateSwapParams({
                 dstChainId: _req.dstChain,
                 dstPoolId: _req.dstPoolId,
-                amountUSD: _balUSD,
-                minAmountLD: (_balUSD * _req.slippageFactor) / BP_DENOMINATOR,
+                amountUSD: _remainingUSD,
+                minAmountLD: (_remainingUSD * _req.slippageFactor) / BP_DENOMINATOR,
                 dstControllerXChain: _req.remoteControllerXChain,
                 dstGasForCall: _req.dstGasForCall,
                 payload: _payload
             }),
-            _req.feeToReimburse,
+            _xcFee,
             _req.refundAddress
         );
     }
@@ -387,6 +395,13 @@ contract ControllerXChain is
         address _dstWallet,
         uint256 _dstGasForCall
     ) external payable nonReentrant {
+        // Safe transfer IN the vault tokens
+        IERC20Upgradeable(_vault).safeTransferFrom(
+            _msgSender(),
+            address(this),
+            _shares
+        );
+
         // Call internal function directly
         _sendWithdrawalRequest(
             XCRequest({
@@ -407,18 +422,12 @@ contract ControllerXChain is
     /// @notice Internal function for sending withdrawal request
     /// @dev Allows for extra functionality for the permit flow
     /// @param _req A XCRequest struct to initiate the cross chain tx
-    function _sendWithdrawalRequest(
-        XCRequest memory _req
-    ) internal {
-        // Safe transfer IN the vault tokens
-        IERC20Upgradeable(_req.vault).safeTransferFrom(
-            _msgSender(),
-            address(this),
+    function _sendWithdrawalRequest(XCRequest memory _req) internal {
+        // Approve spending
+        IERC20Upgradeable(_req.vault).safeIncreaseAllowance(
+            _req.vault,
             _req.amount
         );
-
-        // Approve spending
-        IERC20Upgradeable(_req.vault).safeIncreaseAllowance(_req.vault, _req.amount);
 
         // Perform withdraw USD operation
         IVault(_req.vault).withdrawUSD(_req.amount, _req.slippageFactor);
@@ -430,7 +439,6 @@ contract ControllerXChain is
         require(_balUSD > 0, "no USD withdrawn");
 
         {
-
             // Reimbursement logic (default to USD balance if no fees to reimburse)
             uint256 _remainingUSD = _balUSD;
 
@@ -446,17 +454,20 @@ contract ControllerXChain is
             }
 
             // Get withdrawal payload
-            bytes memory _payload = this.encodeWithdrawalRequest(_req.dstWallet);
+            bytes memory _payload = this.encodeWithdrawalRequest(
+                _req.dstWallet
+            );
 
             // Call Stargate Swap operation
             // Call stargate to initiate bridge
-            
+
             _callStargateSwapUSD(
                 StargateSwapParams({
                     dstChainId: _req.dstChain,
                     dstPoolId: _req.dstPoolId,
                     amountUSD: _remainingUSD,
-                    minAmountLD: (_remainingUSD * _req.slippageFactor) / BP_DENOMINATOR,
+                    minAmountLD: (_remainingUSD * _req.slippageFactor) /
+                        BP_DENOMINATOR,
                     dstControllerXChain: _req.remoteControllerXChain,
                     dstGasForCall: _req.dstGasForCall,
                     payload: _payload
@@ -609,19 +620,21 @@ contract ControllerXChain is
         uint256 _deadline,
         SigComponents calldata _sigComponents
     ) external payable nonReentrant {
+        // Init
+        uint256 _startGas = gasleft(); // To track gas reimbursement.
+        address _signer;
+
         // Check deadline
         require(block.timestamp <= _deadline, "ZorroXC: expired deadline");
 
-        address _signer;
         {
             // Calculate hash of typed data
             bytes32 _structHash = keccak256(
                 abi.encode(
                     _SEND_REQUEST_PERMIT_TYPEHASH,
-                    keccak256(abi.encode(
-                        _XC_PERMIT_REQUEST_TYPEHASH,
-                        _request
-                    )),
+                    keccak256(
+                        abi.encode(_XC_PERMIT_REQUEST_TYPEHASH, _request)
+                    ),
                     _direction,
                     msg.value,
                     _useNonce(_request.originWallet),
@@ -639,57 +652,70 @@ contract ControllerXChain is
             );
 
             // Check if signer matches sender
-            require(_signer == _request.originWallet, "ZorroXC: invalid signature");
+            require(
+                _signer == _request.originWallet,
+                "ZorroXC: invalid signature"
+            );
         }
-
 
         // Allow transaction through
         if (_direction == 0) {
             // Deposit
 
-            // Safe transfer USD IN
+            // Safe transfer vault shares IN
             IERC20Upgradeable(stablecoin).safeTransferFrom(
                 _request.originWallet,
                 address(this),
                 _request.amount
             );
 
-
-            // Convert USD to native ETH for gas + xc tx and refund relayer
-            _recoupXCFeeFromUSD(msg.value, _msgSender());
-            
-            uint256 _amountUSDRemaining = IERC20Upgradeable(stablecoin)
-                .balanceOf(address(this));
+            // Check balances
+            uint256 _balUSD = IERC20Upgradeable(stablecoin).balanceOf(
+                address(this)
+            );
 
             // Make XC deposit request
             _sendDepositRequest(
                 XCRequest({
                     dstChain: _request.dstChain,
                     dstPoolId: _request.dstPoolId,
-                    remoteControllerXChain: abi.encodePacked(_request.remoteControllerXChain),
+                    remoteControllerXChain: abi.encodePacked(
+                        _request.remoteControllerXChain
+                    ),
                     vault: _request.vault,
                     dstWallet: _request.dstWallet,
-                    amount: _amountUSDRemaining,
+                    amount: _balUSD,
                     slippageFactor: _request.slippageFactor,
                     dstGasForCall: _request.dstGasForCall,
-                    feeToReimburse: msg.value,
+                    feeToReimburse: msg.value + _startGas * tx.gasprice,
                     refundAddress: _msgSender() // Set refund address to the relayer
-                })
+                }),
+                msg.value
             );
         } else if (_direction == 1) {
             // Withdraw
+
+            // Safe transfer IN the vault tokens
+            IERC20Upgradeable(_request.vault).safeTransferFrom(
+                _request.originWallet,
+                address(this),
+                _request.amount
+            );
+
             // Make XC withdrawal request
             _sendWithdrawalRequest(
                 XCRequest({
                     dstChain: _request.dstChain,
                     dstPoolId: _request.dstPoolId,
-                    remoteControllerXChain: abi.encodePacked(_request.remoteControllerXChain),
+                    remoteControllerXChain: abi.encodePacked(
+                        _request.remoteControllerXChain
+                    ),
                     vault: _request.vault,
                     amount: _request.amount,
                     slippageFactor: _request.slippageFactor,
                     dstWallet: _request.dstWallet,
                     dstGasForCall: _request.dstGasForCall,
-                    feeToReimburse: msg.value,
+                    feeToReimburse: msg.value + _startGas * tx.gasprice,
                     refundAddress: _msgSender()
                 })
             );
@@ -697,8 +723,6 @@ contract ControllerXChain is
             revert("ZorroXC: invalid dir");
         }
     }
-
-    // TODO: Do we need to do something like this for the Vault permit funcs too?
 
     /// @notice Swaps USD to ETH to compensate relayer for XC fee spent
     /// @param _fee The amount of ETH used for the XC fee

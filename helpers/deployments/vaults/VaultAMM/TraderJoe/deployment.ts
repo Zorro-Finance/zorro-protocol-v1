@@ -8,6 +8,7 @@ const contractInits: ContractInitList<VaultAMMInit> = {
             asset: chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pool,
             token0: chains.avalanche!.tokens.wavax,
             token1: chains.avalanche!.tokens.usdc,
+            tokenWETH: chains.avalanche!.tokens.wavax,
             farmContract: chains.avalanche!.protocols.traderjoe.masterChef!,
             rewardsToken: chains.avalanche!.tokens.joe,
             isFarmable: true,
@@ -24,6 +25,7 @@ const contractInits: ContractInitList<VaultAMMInit> = {
             priceFeeds: {
                 token0: chains.avalanche!.priceFeeds.avax,
                 token1: chains.avalanche!.priceFeeds.usdc,
+                eth: chains.avalanche!.priceFeeds.avax,
                 stablecoin: chains.avalanche!.priceFeeds.usdc,
                 rewards: chains.avalanche!.priceFeeds.joe,
             },

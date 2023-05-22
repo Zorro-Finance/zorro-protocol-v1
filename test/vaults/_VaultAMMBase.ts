@@ -114,15 +114,17 @@ describe('VaultAMMBase', () => {
             const newAsset = ethers.Wallet.createRandom().address;
             const newToken0 = ethers.Wallet.createRandom().address;
             const newToken1 = ethers.Wallet.createRandom().address;
+            const newWETH = ethers.Wallet.createRandom().address;
             const newPool = ethers.Wallet.createRandom().address;
 
             // Run
-            await vault.setTokens(newAsset, newToken0, newToken1, newPool);
+            await vault.setTokens(newAsset, newToken0, newToken1, newWETH, newPool);
 
             // Test
             expect(await vault.asset()).to.equal(newAsset);
             expect(await vault.token0()).to.equal(newToken0);
             expect(await vault.token1()).to.equal(newToken1);
+            expect(await vault.WETH()).to.equal(newWETH);
             expect(await vault.pool()).to.equal(newPool);
         });
 

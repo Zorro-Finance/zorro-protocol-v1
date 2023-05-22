@@ -101,6 +101,8 @@ interface IVault is IERC20Upgradeable {
     ) external;
 
     /// @notice Performs gasless deposits/withdrawals from/to USD using a signature
+    /// @dev WARNING This function reimburses the relayer based on the gas sent with the tx. Therefore, please only sign using trusted 
+    /// dApps or their relayers could collect excess gas reimbursement.
     /// @param _account Account that is signing this transaction
     /// @param _amount The amount of USD (for deposits) or shares (for withdrawals)
     /// @param _maxSlippageFactor Max amount of slippage tolerated per AMM operation (9900 = 1%)

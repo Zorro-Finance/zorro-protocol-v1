@@ -250,6 +250,4 @@ library SafeSwapUniETH {
         );
         amountIn = (amounts[0] * 10000) / _slippageFactor;
     }
-}
-
-// TODO take a close look on both getAmountOut (other lib) and getAmountIn. 
+} 

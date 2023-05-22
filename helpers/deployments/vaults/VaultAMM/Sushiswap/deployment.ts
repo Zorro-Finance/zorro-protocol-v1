@@ -8,6 +8,7 @@ const contractInits: ContractInitList<VaultAMMInit> = {
             asset: chains.matic!.protocols.sushiswap.pools.WMATIC_WETH.pool,
             token0: chains.matic!.tokens.wmatic,
             token1: chains.matic!.tokens.weth,
+            tokenWETH: chains.matic!.tokens.wmatic,
             farmContract: chains.matic!.protocols.sushiswap.masterChef!,
             rewardsToken: chains.matic!.tokens.sushi,
             isFarmable: false,
@@ -24,6 +25,7 @@ const contractInits: ContractInitList<VaultAMMInit> = {
             priceFeeds: {
                 token0: chains.matic!.priceFeeds.matic,
                 token1: chains.matic!.priceFeeds.eth,
+                eth: chains.matic!.priceFeeds.matic,
                 stablecoin: chains.matic!.priceFeeds.usdc,
                 rewards: chains.matic!.priceFeeds.sushi,
             },

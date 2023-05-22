@@ -46,7 +46,7 @@ library SafeSwapUni {
             uint8[] memory _decimals
         ) = _preparePriceData(
                 _swapPath[0],
-                _swapPath[_swapPath.length-1],
+                _swapPath[_swapPath.length - 1],
                 _priceFeedStart,
                 _priceFeedEnd
             );
@@ -179,8 +179,7 @@ library SafeSwapUni {
                 _uniRouter,
                 _amountIn,
                 _path,
-                _slippageFactor,
-                _decimals
+                _slippageFactor
             );
         } else {
             amountOut = _getAmountOutWithExchangeRates(
@@ -217,20 +216,14 @@ library SafeSwapUni {
     /// @param _amountIn The quantity of tokens as input to the swap
     /// @param _path Array of tokens representing the swap path from input to output token
     /// @param _slippageFactor Slippage tolerance (9900 = 1%)
-    /// @param _decimals Array (length 2) of decimal of price feed for each token
     /// @return amountOut The quantity of tokens expected to receive as output
     function _getAmountOutWithoutExchangeRates(
         IAMMRouter02 _uniRouter,
         uint256 _amountIn,
         address[] memory _path,
-        uint256 _slippageFactor,
-        uint8[] memory _decimals
+        uint256 _slippageFactor
     ) internal view returns (uint256 amountOut) {
         uint256[] memory amounts = _uniRouter.getAmountsOut(_amountIn, _path);
-        amountOut =
-            (amounts[amounts.length - 1] *
-                _slippageFactor *
-                10 ** _decimals[1]) /
-            (10000 * (10 ** _decimals[0]));
+        amountOut = (amounts[amounts.length - 1] * _slippageFactor) / 10000;
     }
 }

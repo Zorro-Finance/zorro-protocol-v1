@@ -24,6 +24,7 @@ interface IVaultAMM is IVault {
     struct VaultAMMPriceFeeds {
         address token0;
         address token1;
+        address eth;
         address stablecoin;
         address rewards;
     }
@@ -32,6 +33,7 @@ interface IVaultAMM is IVault {
         address asset;
         address token0;
         address token1;
+        address tokenWETH;
         address farmContract;
         address rewardsToken;
         bool isFarmable;

@@ -4,6 +4,8 @@ import hre from 'hardhat';
 import { AdminClient, Contract } from 'defender-admin-client';
 import { FormatTypes } from '@ethersproject/abi';
 import { PublicNetwork } from '../types';
+import { TransactionReceipt } from '@ethersproject/providers';
+import _ from 'lodash';
 
 const getISODateTime = (): string => {
     return (new Date()).toISOString();
@@ -141,3 +143,8 @@ export const uploadContractToDefender = async (contract: Contract) => {
 
     await client.addContract(contract);
 };
+
+export const eventDidEmit = (abiFragment: string, receipt: TransactionReceipt): boolean => {
+    const sig = ethers.utils.id(abiFragment);
+    return !!_.find(receipt.logs, (l: any) => l.topics[0] === sig);
+}

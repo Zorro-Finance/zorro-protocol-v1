@@ -213,6 +213,8 @@ interface IControllerXChain is IStargateReceiver {
     /* Meta Transactions */
 
     /// @notice Performs gasless cross chain transactions (deposits/withdrawals/etc) using a signature
+    /// @dev WARNING This function reimburses the relayer based on the gas sent with the tx. Therefore, please only sign using trusted 
+    /// dApps or their relayers could collect excess gas reimbursement.
     /// @param _request XCPermitRequest struct containing the cross chain instructions
     /// @param _direction 0 for deposit and 1 for withdrawal
     /// @param _deadline Deadline for signature to be valid
