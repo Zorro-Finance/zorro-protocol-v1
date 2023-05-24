@@ -20,6 +20,8 @@ import "../libraries/PriceFeed.sol";
 
 import "../libraries/SafeSwap.sol";
 
+import "../libraries/SafeSwapETH.sol";
+
 /// @title VaultBase
 /// @notice Base contract for all vaults
 abstract contract VaultBase is
@@ -33,6 +35,10 @@ abstract contract VaultBase is
     /* Constants */
 
     uint256 public constant BP_DENOMINATOR = 10000; // Basis point denominator
+    bytes32 private constant _PERMIT_TRANSACT_USD_TYPEHASH =
+        keccak256(
+            "TransactUSDPermit(address account,uint256 amount,uint256 maxMarketMovement,uint8 direction,uint256 nonce,uint256 deadline)"
+        );
 
     /* Libraries */
 
@@ -55,6 +61,7 @@ abstract contract VaultBase is
         treasury = _initVal.treasury;
         router = _initVal.router;
         stablecoin = _initVal.stablecoin;
+        WETH = _initVal.tokenWETH;
         entranceFeeFactor = _initVal.entranceFeeFactor;
         withdrawFeeFactor = _initVal.withdrawFeeFactor;
         defaultSlippageFactor = 9900; // 1%
@@ -68,7 +75,7 @@ abstract contract VaultBase is
         // Call the ERC20 constructor to set initial values
         super.__ERC20_init("ZOR LP Vault", "ZLPV");
 
-        // Call the ERC20Permit constructor with the same token name
+        // Call the ERC20Permit constructor with the same token name (must match above)
         super.__ERC20Permit_init("ZOR LP Vault");
     }
 
@@ -78,6 +85,7 @@ abstract contract VaultBase is
     address public treasury;
     address public router;
     address public stablecoin;
+    address public WETH;
 
     // Accounting & Fees
     uint256 public entranceFeeFactor;
@@ -175,6 +183,108 @@ abstract contract VaultBase is
     function setGov(address _gov) external onlyOwner {
         gov = _gov;
     }
+
+    /* Meta Txs */
+
+    /// @inheritdoc	IVault
+    function transactUSDWithPermit(
+        address _account,
+        uint256 _amount,
+        uint256 _maxSlippageFactor,
+        uint8 _direction,
+        uint256 _deadline,
+        uint8 _v,
+        bytes32 _r,
+        bytes32 _s
+    ) external whenNotPaused {
+        // Init
+        uint256 _startGas = gasleft();
+
+        // Check deadline
+        require(block.timestamp <= _deadline, "ZorroVault: expired deadline");
+
+        // Calculate hash of typed data
+        bytes32 _structHash = keccak256(
+            abi.encode(
+                _PERMIT_TRANSACT_USD_TYPEHASH,
+                _account,
+                _amount,
+                _maxSlippageFactor,
+                _direction,
+                _useNonce(_account),
+                _deadline
+            )
+        );
+        bytes32 _hash = _hashTypedDataV4(_structHash);
+
+        // Extract signer from signature
+        address _signer = ECDSAUpgradeable.recover(_hash, _v, _r, _s);
+
+        // Check if signer matches sender
+        require(_signer == _account, "ZorroVault: invalid signature");
+
+        // Allow transaction through
+        if (_direction == 0) {
+            // Deposit
+            _depositUSD(_amount, _maxSlippageFactor, _account, _startGas * tx.gasprice, _msgSender());
+        } else if (_direction == 1) {
+            // Withdraw
+            _withdrawUSD(_amount, _maxSlippageFactor, _account, _startGas * tx.gasprice, _msgSender());
+        } else {
+            revert("ZorroVault: invalid dir");
+        }
+    }
+
+    /// @notice Swaps USD to ETH to compensate relayer for XC fee spent
+    /// @param _fee The amount of ETH used for the XC fee
+    /// @param _relayer The address of the relayer to compensate
+    function _recoupXCFeeFromUSD(uint256 _fee, address _relayer) internal {
+        // Prep swap path
+        address[] memory _swapPath = new address[](2);
+        _swapPath[0] = stablecoin;
+        _swapPath[1] = WETH;
+
+        // Swap USD to ETH to the relayer
+        SafeSwapUniETH.safeSwapToETH(
+            router,
+            _fee,
+            _swapPath,
+            priceFeeds[stablecoin],
+            priceFeeds[WETH],
+            defaultSlippageFactor,
+            _relayer
+        );
+    }
+
+    /* Deposits/Withdrawals (abstract) */
+
+    /// @notice Internal function for depositing USD
+    /// @param _amountUSD Amount of USD to deposit
+    /// @param _maxSlippageFactor Max slippage tolerant (9900 = 1%)
+    /// @param _account Where to draw USD funds from
+    /// @param _relayFee Gas that needs to be compensated to relayer. Set to 0 if n/a
+    /// @param _relayer Where to send gas compensation
+    function _depositUSD(
+        uint256 _amountUSD,
+        uint256 _maxSlippageFactor,
+        address _account,
+        uint256 _relayFee,
+        address _relayer
+    ) internal virtual;
+
+    /// @notice Internal function for USD withdrawals
+    /// @param _shares The number of shares to withdraw
+    /// @param _maxSlippageFactor Slippage tolerance (9900 = 1%)
+    /// @param _account The account holding the shares to withdraw
+    /// @param _relayFee Gas that needs to be compensated to relayer. Set to 0 if n/a
+    /// @param _relayer Where to send gas compensation
+    function _withdrawUSD(
+        uint256 _shares,
+        uint256 _maxSlippageFactor,
+        address _account,
+        uint256 _relayFee,
+        address _relayer
+    ) internal virtual;
 
     /* Maintenance Functions */
 

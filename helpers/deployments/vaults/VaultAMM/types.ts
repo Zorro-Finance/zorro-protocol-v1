@@ -2,7 +2,6 @@ export interface VaultAMMInit {
     asset: string;
     token0: string;
     token1: string;
-    tokenWETH: string;
     farmContract: string;
     rewardsToken: string;
     isFarmable: boolean;
@@ -27,6 +26,7 @@ export interface VaultAMMInit {
         treasury: string;
         router: string;
         stablecoin: string;
+        tokenWETH: string;
         entranceFeeFactor: number;
         withdrawFeeFactor: number;
     },

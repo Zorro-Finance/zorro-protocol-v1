@@ -33,7 +33,6 @@ interface IVaultAMM is IVault {
         address asset;
         address token0;
         address token1;
-        address tokenWETH;
         address farmContract;
         address rewardsToken;
         bool isFarmable;
@@ -45,16 +44,6 @@ interface IVaultAMM is IVault {
     }
 
     /* Functions */
-
-    // Cash flow
-
-    /// @notice Deposits main asset token into vault
-    /// @param _amount The amount of asset to deposit
-    function deposit(uint256 _amount) external;
-
-    /// @notice Withdraws main asset and sends back to sender
-    /// @param _shares The number of shares of the main asset to withdraw
-    function withdraw(uint256 _shares) external;
 
     // Accounting
 
