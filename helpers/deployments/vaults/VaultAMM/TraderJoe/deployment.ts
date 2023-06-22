@@ -24,6 +24,7 @@ const contractInits: ContractInitList<VaultAMMInit> = {
             priceFeeds: {
                 token0: chains.avalanche!.priceFeeds.avax,
                 token1: chains.avalanche!.priceFeeds.usdc,
+                eth: chains.avalanche!.priceFeeds.avax,
                 stablecoin: chains.avalanche!.priceFeeds.usdc,
                 rewards: chains.avalanche!.priceFeeds.joe,
             },
@@ -31,6 +32,7 @@ const contractInits: ContractInitList<VaultAMMInit> = {
                 treasury: chains.avalanche!.admin.multiSigOwner,
                 router: chains.avalanche!.infra.uniRouterAddress,
                 stablecoin: chains.avalanche!.tokens.usdc,
+                tokenWETH: chains.avalanche!.tokens.wavax,
                 entranceFeeFactor: vaultFees.entranceFeeFactor,
                 withdrawFeeFactor: vaultFees.withdrawFeeFactor,
             },

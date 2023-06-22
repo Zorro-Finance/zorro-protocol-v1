@@ -42,8 +42,10 @@ contract SushiSwapAMM is VaultAMMBase {
         override
         returns (uint256 pendingRewardsQty)
     {
-        pendingRewardsQty = IMiniChefV2(farmContract)
-            .pendingSushi(pid, address(this));
+        pendingRewardsQty = IMiniChefV2(farmContract).pendingSushi(
+            pid,
+            address(this)
+        );
     }
 
     function updateRewards() public override {

@@ -21,6 +21,7 @@ const config: HardhatUserConfig = {
   },
   networks: {
     hardhat: {
+      chainId: 43114,
       forking: {
         enabled: true,
         url: 'https://api.avax.network/ext/bc/C/rpc'

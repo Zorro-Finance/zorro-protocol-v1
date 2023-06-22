@@ -1,5 +1,5 @@
 import { deploymentArgs } from '../../helpers/deployments/vaults/VaultAMM/TraderJoe/deployment';
-import { deployAMMVault } from "../../helpers/deployments/utilities";
+import { deployAMMVault } from "../../helpers/deployments/vaults/VaultAMM/deployment";
 import hre from 'hardhat';
 import { chains } from "../../helpers/constants";
 import { basename } from 'path';
@@ -15,7 +15,7 @@ async function main() {
   }
 
   // Deploy initial AMM vaults
-  const vaultContractClass = 'TraderJoeAMMV1'
+  const vaultContractClass = 'TraderJoeAMMV1';
   const pool = 'TJ_AVAX_USDC';
   const protocol = 'traderjoe';
 

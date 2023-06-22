@@ -34,7 +34,7 @@ async function main() {
     address: controller.address,
     name: controllerName,
     abi: Controller.interface.format(FormatTypes.json)! as string
-});
+  });
 
   // Log 
   console.log(

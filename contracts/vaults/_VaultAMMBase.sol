@@ -51,6 +51,7 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         // Set price feeds
         _setPriceFeed(token0, _initVal.priceFeeds.token0);
         _setPriceFeed(token1, _initVal.priceFeeds.token1);
+        _setPriceFeed(WETH, _initVal.priceFeeds.eth);
         _setPriceFeed(stablecoin, _initVal.priceFeeds.stablecoin);
         _setPriceFeed(rewardsToken, _initVal.priceFeeds.rewards);
 
@@ -80,16 +81,19 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
     /// @param _asset The main asset token
     /// @param _token0 The first token of the LP pair for this contract
     /// @param _token1 The second token of the LP pair for this contract
+    /// @param _weth Wrapped ETH token (equivalent native token (e.g. WAVAX, WBNB etc.))
     /// @param _pool The LP pair address
     function setTokens(
         address _asset,
         address _token0,
         address _token1,
+        address _weth,
         address _pool
     ) external onlyOwner {
         asset = _asset;
         token0 = _token0;
         token1 = _token1;
+        WETH = _weth;
         pool = _pool;
     }
 
@@ -112,7 +116,7 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
 
     /* Functions */
 
-    /// @inheritdoc	IVaultAMM
+    /// @inheritdoc	IVault
     function deposit(uint256 _amount) external nonReentrant {
         // Safe transfer IN the main asset
         IERC20Upgradeable(pool).safeTransferFrom(
@@ -122,7 +126,7 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         );
 
         // Call core deposit function
-        uint256 _sharesAdded = _deposit(_amount);
+        uint256 _sharesAdded = _deposit(_amount, _msgSender());
 
         // Emit log
         emit DepositAsset(pool, _amount, _sharesAdded);
@@ -132,13 +136,36 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
     function depositUSD(
         uint256 _amountUSD,
         uint256 _maxSlippageFactor
-    ) external nonReentrant {
+    ) external {
+        // Call internal deposit func
+        _depositUSD(
+            _amountUSD,
+            _maxSlippageFactor,
+            _msgSender(),
+            0, // No relay reimbursement needed as this is not a permit deposit
+            address(0) // Dummy address for reimbursement (see above)
+        );
+    }
+
+    /// @inheritdoc VaultBase
+    function _depositUSD(
+        uint256 _amountUSD,
+        uint256 _maxSlippageFactor,
+        address _account,
+        uint256 _relayFee,
+        address _relayer
+    ) internal override nonReentrant {
         // Safe transfer IN USD*
         IERC20Upgradeable(stablecoin).safeTransferFrom(
-            _msgSender(),
+            _account,
             address(this),
             _amountUSD
         );
+
+        // Convert USD to native ETH for gas + xc tx and refund relayer (if applicable)
+        if (_relayFee > 0) {
+            _recoupXCFeeFromUSD(_relayFee, _relayer);
+        }
 
         // Get balance of USD
         uint256 _balUSD = IERC20Upgradeable(stablecoin).balanceOf(
@@ -149,8 +176,6 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         if (token0 != stablecoin) {
             IAMMRouter02(router).safeSwap(
                 _balUSD / 2,
-                stablecoin,
-                token0,
                 swapPaths[stablecoin][token0],
                 priceFeeds[stablecoin],
                 priceFeeds[token0],
@@ -162,8 +187,6 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         if (token1 != stablecoin) {
             IAMMRouter02(router).safeSwap(
                 _balUSD / 2,
-                stablecoin,
-                token1,
                 swapPaths[stablecoin][token1],
                 priceFeeds[stablecoin],
                 priceFeeds[token1],
@@ -190,7 +213,7 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         uint256 _balLPToken = IERC20Upgradeable(pool).balanceOf(address(this));
 
         // Call core deposit function
-        uint256 _sharesAdded = _deposit(_balLPToken);
+        uint256 _sharesAdded = _deposit(_balLPToken, _account);
 
         // Emit log
         emit DepositUSD(pool, _amountUSD, _sharesAdded, _maxSlippageFactor);
@@ -199,9 +222,11 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
     /// @notice Core deposit function
     /// @dev Internal deposit function for updating ledger, taking fees, and farming
     /// @param _amount Amount of main asset to deposit
+    /// @param _account Where to send shares to
     /// @return sharesAdded Number of shares added/minted
     function _deposit(
-        uint256 _amount
+        uint256 _amount,
+        address _account
     ) internal virtual whenNotPaused returns (uint256 sharesAdded) {
         // Preflight checks
         require(_amount > 0, "negdeposit");
@@ -226,7 +251,6 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
             }
         }
 
-
         if (isFarmable) {
             // Farm the want token if applicable.
             _farm();
@@ -235,8 +259,8 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
             assetLockedTotal += _amount;
         }
 
-        // Mint ERC20 token proportional to share, and send to msg.sender
-        _mint(_msgSender(), sharesAdded);
+        // Mint ERC20 token proportional to share, and send to account
+        _mint(_account, sharesAdded);
     }
 
     /// @notice Internal function for farming Want token. Responsible for staking Want token in a MasterChef/MasterApe-like contract
@@ -254,11 +278,8 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         IAMMFarm(farmContract).deposit(pid, _balLP);
     }
 
-    /// @inheritdoc	IVaultAMM
-    function withdraw(
-        uint256 _shares,
-        uint256 _maxSlippageFactor
-    ) external nonReentrant {
+    /// @inheritdoc	IVault
+    function withdraw(uint256 _shares) external nonReentrant {
         // Safe Transfer share tokens IN
         IERC20Upgradeable(address(this)).safeTransferFrom(
             _msgSender(),
@@ -267,34 +288,35 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         );
 
         // Call core withdrawal function
-        (uint256 _amountWithdrawn, bool _didSkipEarn) = _withdraw(
-            _shares,
-            _msgSender(),
-            _maxSlippageFactor
-        );
+        uint256 _amountWithdrawn = _withdraw(_shares, _msgSender());
 
         // Emit log
-        emit WithdrawAsset(pool, _shares, _amountWithdrawn, _didSkipEarn);
+        emit WithdrawAsset(pool, _shares, _amountWithdrawn);
     }
 
     /// @inheritdoc	IVault
-    function withdrawUSD(
+    function withdrawUSD(uint256 _shares, uint256 _maxSlippageFactor) external {
+        // Call internal withdrawal function
+        _withdrawUSD(_shares, _maxSlippageFactor, _msgSender(), 0, address(0));
+    }
+
+    /// @inheritdoc VaultBase
+    function _withdrawUSD(
         uint256 _shares,
-        uint256 _maxSlippageFactor
-    ) external nonReentrant {
+        uint256 _maxSlippageFactor,
+        address _account,
+        uint256 _relayFee,
+        address _relayer
+    ) internal override nonReentrant {
         // Safe Transfer share tokens IN
         IERC20Upgradeable(address(this)).safeTransferFrom(
-            _msgSender(),
+            _account,
             address(this),
             _shares
         );
 
         // Call core withdrawal function
-        (, bool _didSkipEarn) = _withdraw(
-            _shares,
-            address(this),
-            _maxSlippageFactor
-        );
+        _withdraw(_shares, address(this));
 
         // Get balance of main asset token and reward token
         uint256 _balAsset = IERC20Upgradeable(asset).balanceOf(address(this));
@@ -317,8 +339,6 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         if (token0 != stablecoin) {
             IAMMRouter02(router).safeSwap(
                 _balToken0,
-                token0,
-                stablecoin,
                 swapPaths[token0][stablecoin],
                 priceFeeds[token0],
                 priceFeeds[stablecoin],
@@ -329,8 +349,6 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         if (token1 != stablecoin) {
             IAMMRouter02(router).safeSwap(
                 _balToken1,
-                token1,
-                stablecoin,
                 swapPaths[token1][stablecoin],
                 priceFeeds[token1],
                 priceFeeds[stablecoin],
@@ -340,45 +358,44 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
         }
 
         // Get balances of USD*
-        uint256 _balUSD = IERC20Upgradeable(stablecoin).balanceOf(
+        uint256 _remainingUSD = IERC20Upgradeable(stablecoin).balanceOf(
             address(this)
         );
 
+        // Reimburse fee (if applicable)
+        if (_relayFee > 0) {
+            // Recoup from USD balance
+            _recoupXCFeeFromUSD(_relayFee, _relayer);
+
+            // Update remaining USD for withdrawal
+            _remainingUSD = IERC20Upgradeable(stablecoin).balanceOf(
+                address(this)
+            );
+        }
+
         // Transfer USD*
-        IERC20Upgradeable(stablecoin).safeTransfer(_msgSender(), _balUSD);
+        IERC20Upgradeable(stablecoin).safeTransfer(_account, _remainingUSD);
 
         // Emit log
-        emit WithdrawUSD(
-            pool,
-            _balUSD,
-            _shares,
-            _didSkipEarn,
-            _maxSlippageFactor
-        );
+        emit WithdrawUSD(pool, _remainingUSD, _shares, _maxSlippageFactor);
     }
 
     /// @notice Core withdrawal function
     /// @dev Internal withdraw function for unfarming, updating ledger, and transfering remaining investment
     /// @param _shares Number of shares to withdraw
     /// @param _destination Where to send withdrawn funds and rewards
-    /// @param _maxSlippageFactor The slippage tolerance (9900 = 1%)
     /// @return amountAsset The quantity of main asset token removed
-    /// @return didSkipEarn Whether earn function was skipped
     function _withdraw(
         uint256 _shares,
-        address _destination,
-        uint256 _maxSlippageFactor
-    )
-        internal
-        virtual
-        whenNotPaused
-        returns (uint256 amountAsset, bool didSkipEarn)
-    {
+        address _destination
+    ) internal virtual whenNotPaused returns (uint256 amountAsset) {
         // Preflight checks
         require(_shares > 0, "negShares");
 
-        // Attempt to run earn()
-        didSkipEarn = this.earn(_maxSlippageFactor, true);
+        // Attempt to run earn(). Sometimes it will fail due to not enough rewards being accumulated since last earn, and this is ok.
+        try this.earn() {} catch {
+            emit VaultAMMFailedEarn();
+        }
 
         // Calculate proportional amount of token to unfarm
         uint256 _removableAmount = (_shares * assetLockedTotal) /
@@ -430,13 +447,7 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
     }
 
     /// @notice Harvests farm token and reinvests earnings
-    /// @param _maxSlippageFactor The slippage tolerance (9900 = 1%)
-    /// @param _softFail Checks to see if swaps are possible with low rewards, and skips if not
-    /// @return didSkip Registers true if _softFail was set and the function could not complete (i.e. due to swap not being possible)
-    function earn(
-        uint256 _maxSlippageFactor,
-        bool _softFail
-    ) public virtual whenNotPaused returns (bool didSkip) {
+    function earn() public virtual whenNotPaused {
         // Update rewards
         this.updateRewards();
 
@@ -448,59 +459,26 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
             address(this)
         );
 
-        // Check to see if swap is possible, if softFail set
-        if (_softFail) {
-            // Swaps can fail if not enough rewards have been earned since last earn block
-            // If not swappable, exit early
-
-            for (uint8 i = 0; i < 2; i++) {
-                // Determine token, and skip swap check if same as rewardToken
-                address _token = i == 0 ? token0 : token1;
-                if (_token == rewardsToken) {
-                    continue;
-                }
-
-                bool _isSwappable = IAMMRouter02(router).checkIsSwappable(
-                    _balReward,
-                    rewardsToken,
-                    _token,
-                    swapPaths[rewardsToken][_token],
-                    priceFeeds[rewardsToken],
-                    priceFeeds[_token],
-                    _maxSlippageFactor
-                );
-
-                if (!_isSwappable) {
-                    didSkip = true;
-                    return didSkip;
-                }
-            }
-        }
-
         // Check to see if any rewards were obtained
         if (_balReward > 0) {
             // Swap to Tokens 0,1
             if (rewardsToken != token0) {
                 IAMMRouter02(router).safeSwap(
                     _balReward / 2,
-                    rewardsToken,
-                    token0,
                     swapPaths[rewardsToken][token0],
                     priceFeeds[rewardsToken],
                     priceFeeds[token0],
-                    _maxSlippageFactor,
+                    defaultSlippageFactor,
                     address(this)
                 );
             }
             if (rewardsToken != token1) {
                 IAMMRouter02(router).safeSwap(
                     _balReward / 2,
-                    rewardsToken,
-                    token1,
                     swapPaths[rewardsToken][token1],
                     priceFeeds[rewardsToken],
                     priceFeeds[token1],
-                    _maxSlippageFactor,
+                    defaultSlippageFactor,
                     address(this)
                 );
             }
@@ -516,7 +494,7 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
             token1,
             _balToken0,
             _balToken1,
-            _maxSlippageFactor,
+            defaultSlippageFactor,
             address(this)
         );
 

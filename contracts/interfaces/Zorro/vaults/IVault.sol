@@ -27,15 +27,13 @@ interface IVault is IERC20Upgradeable {
     event WithdrawAsset(
         address indexed _pool,
         uint256 indexed _shares,
-        uint256 indexed _amountAssetRemoved,
-        bool withdrewWithoutEarn
+        uint256 indexed _amountAssetRemoved
     );
 
     event WithdrawUSD(
         address indexed _pool,
         uint256 indexed _amountUSD,
         uint256 indexed _sharesRemoved,
-        bool withdrewWithoutEarn,
         uint256 _maxSlippageFactor
     );
 
@@ -50,6 +48,7 @@ interface IVault is IERC20Upgradeable {
         address treasury;
         address router;
         address stablecoin;
+        address tokenWETH;
         uint256 entranceFeeFactor;
         uint256 withdrawFeeFactor;
     }
@@ -94,6 +93,10 @@ interface IVault is IERC20Upgradeable {
 
     // Cash flow operations
 
+    /// @notice Deposits main asset token into vault
+    /// @param _amount The amount of asset to deposit
+    function deposit(uint256 _amount) external;
+
     /// @notice Converts USD* to main asset and deposits it
     /// @param _amountUSD The amount of USD to deposit
     /// @param _maxSlippageFactor Max amount of slippage tolerated per AMM operation (9900 = 1%)
@@ -102,10 +105,36 @@ interface IVault is IERC20Upgradeable {
         uint256 _maxSlippageFactor
     ) external;
 
+    /// @notice Withdraws main asset and sends back to sender
+    /// @param _shares The number of shares of the main asset to withdraw
+    function withdraw(uint256 _shares) external;
+
     /// @notice Withdraws main asset, converts to USD*, and sends back to sender
     /// @param _shares The number of shares of the main asset to withdraw
     /// @param _maxSlippageFactor Max amount of slippage tolerated per AMM operation (9900 = 1%)
     function withdrawUSD(uint256 _shares, uint256 _maxSlippageFactor) external;
+
+    /// @notice Performs gasless deposits/withdrawals from/to USD using a signature
+    /// @dev WARNING This function reimburses the relayer based on the gas sent with the tx. Therefore, please only sign using trusted 
+    /// dApps or their relayers could collect excess gas reimbursement.
+    /// @param _account Account that is signing this transaction
+    /// @param _amount The amount of USD (for deposits) or shares (for withdrawals)
+    /// @param _maxSlippageFactor Max amount of slippage tolerated per AMM operation (9900 = 1%)
+    /// @param _direction 0 for deposit and 1 for withdrawal
+    /// @param _deadline Deadline for signature to be valid
+    /// @param _v Elliptical sig param v
+    /// @param _r Elliptical sig param r
+    /// @param _s Elliptical sig param s
+    function transactUSDWithPermit(
+        address _account,
+        uint256 _amount,
+        uint256 _maxSlippageFactor,
+        uint8 _direction,
+        uint256 _deadline,
+        uint8 _v,
+        bytes32 _r,
+        bytes32 _s
+    ) external;
 
     // Token operations
 

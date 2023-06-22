@@ -18,6 +18,7 @@ export interface VaultAMMInit {
     priceFeeds: {
         token0: string;
         token1: string;
+        eth: string;
         stablecoin: string;
         rewards: string;
     },
@@ -25,6 +26,7 @@ export interface VaultAMMInit {
         treasury: string;
         router: string;
         stablecoin: string;
+        tokenWETH: string;
         entranceFeeFactor: number;
         withdrawFeeFactor: number;
     },

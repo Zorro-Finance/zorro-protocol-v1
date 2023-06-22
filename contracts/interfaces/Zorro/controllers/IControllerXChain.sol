@@ -21,7 +21,50 @@ interface IControllerXChain is IStargateReceiver {
 
         address router;
         address stablecoin;
+        address tokenWETH;
         address stablecoinPriceFeed;
+        address ethPriceFeed;
+    }
+
+    struct SigComponents {
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+    }
+
+    struct XCPermitRequest {
+        uint16 dstChain;
+        uint256 dstPoolId;
+        address remoteControllerXChain;
+        address vault;
+        address originWallet;
+        address dstWallet;
+        uint256 amount;
+        uint256 slippageFactor;
+        uint256 dstGasForCall;
+    }
+
+    struct XCRequest {
+        uint16 dstChain;
+        uint256 dstPoolId;
+        bytes remoteControllerXChain;
+        address vault;
+        uint256 amount;
+        uint256 slippageFactor;
+        address dstWallet;
+        uint256 dstGasForCall;
+        uint256 feeToReimburse;
+        address refundAddress;
+    }
+
+    struct StargateSwapParams {
+        uint16 dstChainId;
+        uint256 dstPoolId;
+        uint256 amountUSD;
+        uint256 minAmountLD;
+        bytes dstControllerXChain;
+        uint256 dstGasForCall;
+        bytes payload;
     }
 
     /* State */
@@ -166,4 +209,20 @@ interface IControllerXChain is IStargateReceiver {
     function receiveWithdrawalRequest(
         address _wallet
     ) external;
+
+    /* Meta Transactions */
+
+    /// @notice Performs gasless cross chain transactions (deposits/withdrawals/etc) using a signature
+    /// @dev WARNING This function reimburses the relayer based on the gas sent with the tx. Therefore, please only sign using trusted 
+    /// dApps or their relayers could collect excess gas reimbursement.
+    /// @param _request XCPermitRequest struct containing the cross chain instructions
+    /// @param _direction 0 for deposit and 1 for withdrawal
+    /// @param _deadline Deadline for signature to be valid
+    /// @param _sigComponents Elliptical sig params: v, r, s
+    function requestWithPermit(
+        XCPermitRequest calldata _request,
+        uint8 _direction,
+        uint256 _deadline,
+        SigComponents calldata _sigComponents
+    ) external payable;
 }

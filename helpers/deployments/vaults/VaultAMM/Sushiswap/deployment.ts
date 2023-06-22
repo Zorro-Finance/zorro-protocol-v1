@@ -24,6 +24,7 @@ const contractInits: ContractInitList<VaultAMMInit> = {
             priceFeeds: {
                 token0: chains.matic!.priceFeeds.matic,
                 token1: chains.matic!.priceFeeds.eth,
+                eth: chains.matic!.priceFeeds.matic,
                 stablecoin: chains.matic!.priceFeeds.usdc,
                 rewards: chains.matic!.priceFeeds.sushi,
             },
@@ -31,6 +32,7 @@ const contractInits: ContractInitList<VaultAMMInit> = {
                 treasury: chains.matic!.admin.multiSigOwner,
                 router: chains.matic!.infra.uniRouterAddress,
                 stablecoin: chains.matic!.tokens.usdc,
+                tokenWETH: chains.matic!.tokens.wmatic,
                 entranceFeeFactor: vaultFees.entranceFeeFactor,
                 withdrawFeeFactor: vaultFees.withdrawFeeFactor,
             },

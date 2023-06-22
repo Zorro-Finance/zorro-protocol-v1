@@ -18,7 +18,7 @@ The Zorro protcol is a true cross-chain yield aggregator that allows one to take
 * Hardhat
 * OpenZeppelin libraries
 * Timelock architecture
-* Upgradeable contracts via UUPS proxies
+* Upgradeable contracts via Beacon proxies
 * Chainlink Oracle
 * Gnosis Safe
 * Openzeppelin Defender
@@ -163,7 +163,7 @@ and to have more control.
 
 # Upgradeability
 
-To allow for more features and fixes, we implement a _UUPS Proxy_ based on OpenZeppelin Upgradeability standard. 
+To allow for more features and fixes, we implement a _Beacon Proxy_ based on OpenZeppelin Upgradeability standard. 
 [Upgradeable Contracts](https://docs.openzeppelin.com/upgrades-plugins/1.x/proxies)
 
 # Glossary

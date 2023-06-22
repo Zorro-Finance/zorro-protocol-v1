@@ -1,5 +1,5 @@
 import {deploymentArgs} from '../../helpers/deployments/vaults/VaultAMM/Sushiswap/deployment';
-import { deployAMMVault } from "../../helpers/deployments/utilities";
+import { deployAMMVault } from "../../helpers/deployments/vaults/VaultAMM/deployment";
 import { chains } from "../../helpers/constants";
 import { basename } from 'path';
 import hre from 'hardhat';

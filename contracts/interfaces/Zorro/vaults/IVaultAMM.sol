@@ -8,6 +8,7 @@ import "./IVault.sol";
 /// @notice Interface for Standard AMM based vaults
 interface IVaultAMM is IVault {
     /* Events */
+    event VaultAMMFailedEarn ();
 
     /* Structs */
 
@@ -23,6 +24,7 @@ interface IVaultAMM is IVault {
     struct VaultAMMPriceFeeds {
         address token0;
         address token1;
+        address eth;
         address stablecoin;
         address rewards;
     }
@@ -42,17 +44,6 @@ interface IVaultAMM is IVault {
     }
 
     /* Functions */
-
-    // Cash flow
-
-    /// @notice Deposits main asset token into vault
-    /// @param _amount The amount of asset to deposit
-    function deposit(uint256 _amount) external;
-
-    /// @notice Withdraws main asset and sends back to sender
-    /// @param _shares The number of shares of the main asset to withdraw
-    /// @param _maxSlippageFactor The slippage tolerance (9900 = 1%)
-    function withdraw(uint256 _shares, uint256 _maxSlippageFactor) external;
 
     // Accounting
 
