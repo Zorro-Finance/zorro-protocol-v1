@@ -10,7 +10,7 @@ const contractInits: ContractInitList<VaultAMMInit> = {
             token1: chains.avalanche!.tokens.usdc,
             farmContract: chains.avalanche!.protocols.traderjoe.masterChef!,
             rewardsToken: chains.avalanche!.tokens.joe,
-            isFarmable: true,
+            isFarmable: false, // Changed to false to simplify operations at launch
             pid: chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pid!,
             pool: chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pool,
             swapPaths: {

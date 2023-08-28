@@ -265,6 +265,7 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
 
     /// @notice Internal function for farming Want token. Responsible for staking Want token in a MasterChef/MasterApe-like contract
     function _farm() internal virtual whenNotPaused {
+        // TODO: Shouldn't there be a check for isFarmable here?
         // Get LP balance
         uint256 _balLP = IERC20Upgradeable(pool).balanceOf(address(this));
 
@@ -448,6 +449,8 @@ abstract contract VaultAMMBase is VaultBase, IVaultAMM {
 
     /// @notice Harvests farm token and reinvests earnings
     function earn() public virtual whenNotPaused {
+        // TODO: Check if farmable
+        
         // Update rewards
         this.updateRewards();
 

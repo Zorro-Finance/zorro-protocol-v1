@@ -13,6 +13,7 @@ describe('VaultAMMBase', () => {
 
         // Get init arguments for contract deployment
         const initArgs: any[] = deploymentArgs('avalanche', 'TJ_AVAX_USDC', owner.address, owner.address);
+        initArgs[0].isFarmable = true; // Override 
 
         // Get contract factory
         const Vault = await ethers.getContractFactory('TraderJoeAMMV1');
