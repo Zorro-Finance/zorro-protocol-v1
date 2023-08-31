@@ -1,8 +1,9 @@
 import { ethers, upgrades } from 'hardhat';
-import { verifyContract, uploadContractToDefender, getLatestBeacon, recordBeacon } from "../../utilities";
+import { verifyContract, uploadContractToDefender, getLatestBeacon, recordBeacon, getMatchingBeaconProxies } from "../../utilities";
 import { FormatTypes } from '@ethersproject/abi';
 import { PublicNetwork } from '../../../types';
 import { recordVaultDeployment } from '../deployment';
+import { Contract } from 'ethers';
 
 
 export const deployAMMVault = async (
@@ -15,65 +16,99 @@ export const deployAMMVault = async (
     shouldVerifyContract: boolean = true,
     shouldUploadToDefender: boolean = true,
 ) => {
+    // Init
+    let beacon, beaconProxy: Contract;
+
     // Deploy initial AMM vaults
     const Vault = await ethers.getContractFactory(vaultContractClass);
 
     // Check if beacon contract exists
-    let beacon = await getLatestBeacon(vaultContractClass, network);
+    let beaconAddr = await getLatestBeacon(vaultContractClass, network);
 
-    // If doesn't exist, deploy it
-    if (!beacon) {
-        // Deploy beacon contract
-        const beaconProxy = await upgrades.deployBeacon(Vault);
-        await beaconProxy.deployed();
+    if (beaconAddr) {
+        // If beacon exists, upgrade (leave proxy alone)
+        beacon = await upgrades.upgradeBeacon(
+            beaconAddr,
+            Vault,
+            {
+                kind: 'beacon',
+            }
+        );
+
+        // Block until deployed
+        await beacon.deployed();
+
+        // Log 
+        console.log(
+            `${vaultContractClass}::${pool} upgraded beacon to ${beaconAddr}`
+        );
+    } else {
+        // If doesn't exist, deploy beacon AND proxy
+        beacon = await upgrades.deployBeacon(Vault);
+
+        // Block until deployed
+        await beacon.deployed();
 
         // Assign beacon address
-        beacon = beaconProxy.address;
+        beaconAddr = beacon.address;
 
-        // Record deployment
-        await recordBeacon(vaultContractClass, network, beacon, source);
+        // Deploy beacon proxy
+        beaconProxy = await upgrades.deployBeaconProxy(
+            beaconAddr!,
+            Vault,
+            deploymentArgs,
+            {
+                kind: 'beacon',
+            }
+        );
+
+        // Block until deployed
+        await beaconProxy.deployed();
+
+        // Record the contract deployment in a lock file
+        await recordVaultDeployment(
+            vaultContractClass,
+            network,
+            protocol,
+            pool,
+            beaconProxy.address,
+            source
+        );
+
+        // Log 
+        console.log(
+            `${vaultContractClass}::${pool} proxy deployed to ${beaconProxy.address} and beacon deployed to ${beaconAddr}`
+        );
     }
 
-    // Deploy beacon proxy
-    const vault = await upgrades.deployBeaconProxy(
-        beacon!,
-        Vault,
-        deploymentArgs,
-        {
-            kind: 'beacon',
-        }
-    );
+    // Record deployment
+    await recordBeacon(vaultContractClass, network, beaconAddr!, source);
 
-    // Block until deployed
-    await vault.deployed();
-
-    // Log 
-    console.log(
-        `${vaultContractClass}::${pool} proxy deployed to ${vault.address} and implementation deployed to ${beacon}`
-    );
-
+    console.log('about to verify contract...');
+    
     // Verify contract optionally
     if (shouldVerifyContract) {
-        await verifyContract(beacon!, []);
+        // In this case verify the beacon, not the proxy
+        await verifyContract(beaconAddr!, []);
     }
+
+    console.log('about to upload to defender...');
 
     // Upload contract to Defender
     if (shouldUploadToDefender) {
-        await uploadContractToDefender({
-            network: network as PublicNetwork,
-            address: vault.address,
-            name: vaultContractClass,
-            abi: Vault.interface.format(FormatTypes.json)! as string
-        });
-    }
+        // Get all proxies that point to beacon
+        const vaults = await getMatchingBeaconProxies(vaultContractClass, network);
+        console.log('vaults found in defender upload block: ', vaults);
 
-    // Record the contract deployment in a lock file
-    await recordVaultDeployment(
-        vaultContractClass,
-        network,
-        protocol,
-        pool,
-        vault.address,
-        source
-    );
+        // Iterate through each and upload to Defender
+        for (let v of vaults) {
+            // In this case upload ABI data for the *proxy* not the beacon/implementation
+            await uploadContractToDefender({
+                network: network as PublicNetwork,
+                address: v.deployment_address,
+                name: vaultContractClass,
+                abi: Vault.interface.format(FormatTypes.json)! as string,
+            });
+        }
+    }
 };

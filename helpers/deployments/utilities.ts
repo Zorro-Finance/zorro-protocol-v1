@@ -13,14 +13,23 @@ export const getISODateTime = (): string => {
 }
 
 interface DeploymentCSV {
-    contractClass: string;
+    contract_class: string;
     network: string;
-    deploymentAddress: string;
+    deployment_address: string;
     source: string;
     date: string;
 }
 
 interface BeaconCSV extends DeploymentCSV {}
+interface VaultCSV {
+    vault_contract_class: string;
+    network: string;
+    protocol: string;
+    pool: string;
+    deployment_address: string;
+    source: string;
+    date: string;
+}
 
 export const recordDeployment = async (
     contractClass: string,
@@ -31,9 +40,9 @@ export const recordDeployment = async (
     // Prep path and record
     const path = 'deployments/contracts.lock';
     const record: DeploymentCSV = {
-        contractClass,
+        contract_class: contractClass,
         network,
-        deploymentAddress,
+        deployment_address: deploymentAddress,
         source,
         date: getISODateTime(),
     };
@@ -51,9 +60,9 @@ export const recordBeacon = async (
     // Prep path and record
     const path = 'deployments/beacons.lock';
     const record: BeaconCSV = {
-        contractClass,
+        contract_class: contractClass,
         network,
-        deploymentAddress,
+        deployment_address: deploymentAddress,
         source,
         date: getISODateTime(),
     };
@@ -73,10 +82,10 @@ export const getLatestBeacon = async (contractClass: string, network: string): P
             const records: BeaconCSV[] = [];
             createReadStream(path)
                 .pipe(csv())
-                .on('data', records.push)
+                .on('data', d => records.push(d))
                 .on('end', () => {
                     // Find beacon contracts that match the contract class for a given network
-                    const matchingRecords = _.filter(records, r => r.contractClass === contractClass && r.network === network);
+                    const matchingRecords = _.filter(records, r => r.contract_class === contractClass && r.network === network);
 
                     // Return undefined if no matches. Otherewise find the most recent beacon deployment
                     if (matchingRecords.length > 0) {
@@ -85,13 +94,34 @@ export const getLatestBeacon = async (contractClass: string, network: string): P
                         // Sort reverse chronologically
                         const matchingRecordsSorted = _.orderBy(matchingRecordsWithDate, ['dt'], ['desc']);
                         // Take most recent deployment
-                        resolve(matchingRecordsSorted[0].deploymentAddress);
+                        resolve(matchingRecordsSorted[0].deployment_address);
                     } else {
                         resolve(undefined);
                     }
                 });
         } else {
             resolve(undefined);
+        }
+    });
+};
+
+export const getMatchingBeaconProxies = async (contractClass: string, network: string): Promise<VaultCSV[]> => {
+    const path = 'deployments/vaults.lock';
+
+    return new Promise(resolve => {
+        if (existsSync(path)) {
+            const records: VaultCSV[] = [];
+            createReadStream(path)
+                .pipe(csv())
+                .on('data', d => records.push(d))
+                .on('end', () => {
+                    // Find beacon contracts that match the contract class for a given network
+                    const matchingRecords = _.filter(records, r => r.vault_contract_class === contractClass && r.network === network);
+
+                    resolve(matchingRecords);
+                });
+        } else {
+            resolve([]);
         }
     });
 };
@@ -108,7 +138,6 @@ export const verifyContract = async (
 
 export const uploadContractToDefender = async (contract: Contract) => {
     const client = new AdminClient({ apiKey: process.env.DEFENDER_API_KEY!, apiSecret: process.env.DEFENDER_API_SECRET! });
-
     await client.addContract(contract);
 };
 
