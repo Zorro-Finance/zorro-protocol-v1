@@ -7,8 +7,8 @@
       "kind": "beacon"
     },
     {
-      "address": "0x4d5a3FD0940194d7CBDE8fE02099845Fd7FCc889",
-      "txHash": "0x6fe5c6766f458a9da9eaa4167dacae94002b428d82cd2adccf64802093eaeef1",
+      "address": "0x4476171d7A876BBb86c43B9479f917200d3527Dd",
+      "txHash": "0x0389629493cb9e5d281b926a09dbd52c37762252f415c7ad76f64a8370d35b49",
       "kind": "uups"
     }
   ],
@@ -463,8 +463,8 @@
       }
     },
     "f744afa4aa9d81de6ba45b7ba2cd1f7bde8d402fa18751fcc515f2eb3db97983": {
-      "address": "0x95DaB8f1db1ae09B4A983C369F98267Cc48C6F25",
-      "txHash": "0x48637fc8e31e0ed20dfa9f48865670a8b93d993ba8aaa408d8017c64a98f3d50",
+      "address": "0xA65f437Eb3C471A73300876EB98675fD1D491355",
+      "txHash": "0xbf906fcb994c01ea21f7d83643e6bdaecb6be3ce69dd28a0c493599a0613c73c",
       "layout": {
         "solcVersion": "0.8.18",
         "storage": [
@@ -649,7 +649,7 @@
             "label": "_nonces",
             "offset": 0,
             "slot": "312",
-            "type": "t_mapping(t_address,t_struct(Counter)3126_storage)",
+            "type": "t_mapping(t_address,t_struct(Counter)2308_storage)",
             "contract": "ControllerXChain",
             "src": "contracts/controllers/ControllerXChain.sol:109"
           }
@@ -679,11 +679,11 @@
             "label": "contract AggregatorV3Interface",
             "numberOfBytes": "20"
           },
-          "t_mapping(t_address,t_struct(Counter)3126_storage)": {
+          "t_mapping(t_address,t_struct(Counter)2308_storage)": {
             "label": "mapping(address => struct CountersUpgradeable.Counter)",
             "numberOfBytes": "32"
           },
-          "t_struct(Counter)3126_storage": {
+          "t_struct(Counter)2308_storage": {
             "label": "struct CountersUpgradeable.Counter",
             "members": [
               {

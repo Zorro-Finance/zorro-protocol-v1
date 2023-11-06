@@ -43,14 +43,17 @@ export const deployAMMVault = async (
             `${vaultContractClass}::${pool} upgraded beacon to ${beaconAddr}`
         );
     } else {
+        console.log('trying to deploy new beacon');
         // If doesn't exist, deploy beacon AND proxy
         beacon = await upgrades.deployBeacon(Vault);
+        console.log('started to deploy new beacon', beacon.address);
 
         // Block until deployed
         await beacon.deployed();
 
         // Assign beacon address
         beaconAddr = beacon.address;
+        console.log('deployed new beacon. Now deploying beacon proxy...');
 
         // Deploy beacon proxy
         beaconProxy = await upgrades.deployBeaconProxy(
@@ -62,8 +65,12 @@ export const deployAMMVault = async (
             }
         );
 
+        console.log('deploy beaconProxy in progress');
+
         // Block until deployed
         await beaconProxy.deployed();
+
+        console.log('beacon proxy deployed: ', beaconProxy.address);
 
         // Record the contract deployment in a lock file
         await recordVaultDeployment(

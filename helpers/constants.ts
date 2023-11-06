@@ -26,7 +26,7 @@ export const chains: ChainListOpt = {
         infra: {
             uniRouterAddress: '0x60aE616a2155Ee3d9A68541Ba4544862310933d4',
             uniFactoryAddress: '0x9Ad6C38BE94206cA50bb0d90783181662f0Cfa10',
-            stargateRouter: '0x45A01E4e04F14f7A4a6702c74187c5F6222033cd',
+            stargateRouter: '0xeCc19E177d24551aA7ed6Bc6FE566eCa726CC8a9',
             layerZeroEndpoint: '0x3c2269811836af69497E5F486A85D7316753cf62',
         },
         protocols: {
@@ -65,7 +65,7 @@ export const chains: ChainListOpt = {
         infra: {
             uniRouterAddress: '0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506',
             uniFactoryAddress: '0xc35DADB65012eC5796536bD9864eD8773aBc74C4',
-            stargateRouter: '0x45A01E4e04F14f7A4a6702c74187c5F6222033cd',
+            stargateRouter: '0xeCc19E177d24551aA7ed6Bc6FE566eCa726CC8a9',
             layerZeroEndpoint: '0x3c2269811836af69497E5F486A85D7316753cf62',
         },
         protocols: {
@@ -101,7 +101,7 @@ export const chains: ChainListOpt = {
         infra: {
             uniRouterAddress: '0x10ED43C718714eb63d5aA57B78B54704E256024E',
             uniFactoryAddress: '0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73',
-            stargateRouter: '0x4a364f8c717cAAD9A442737Eb7b8A55cc6cf18D8',
+            stargateRouter: '0xeCc19E177d24551aA7ed6Bc6FE566eCa726CC8a9',
             layerZeroEndpoint: '0x3c2269811836af69497E5F486A85D7316753cf62',
         },
         protocols: {
