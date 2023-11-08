@@ -2,91 +2,28 @@
 
 pragma solidity ^0.8.18;
 
-import "../interfaces/Zorro/vaults/IVaultUniswapV2.sol";
-
 import "./_VaultBase.sol";
 
 import "../libraries/LPUtility.sol";
 
 /// @title VaultUniswapV2
 /// @notice Vault contract for standard UniswapV2 based investment strategies
-contract VaultUniswapV2 is VaultBase, IVaultUniswapV2 {
+contract VaultUniswapV2 is VaultBase {
     /* Libraries */
 
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeSwapUni for IUniswapV2Router02;
     using LPUtility for IUniswapV2Router02;
 
-    /* Constructor */
-
-    /// @notice Upgradeable constructor
-    /// @param _initVal A VaultUniswapV2Init struct
-    /// @param _timelockOwner The owner address (timelock)
-    /// @param _gov The governor address for non timelock admin functions
-    function initialize(
-        VaultUniswapV2Init memory _initVal,
-        address _timelockOwner,
-        address _gov
-    ) public initializer {
-        // Set contract config
-        asset = _initVal.asset;
-        token0 = _initVal.token0;
-        token1 = _initVal.token1;
-        pool = _initVal.pool;
-
-        // Set swap paths
-        _setSwapPaths(_initVal.swapPaths.stablecoinToToken0);
-        _setSwapPaths(_initVal.swapPaths.stablecoinToToken1);
-        _setSwapPaths(_initVal.swapPaths.token0ToStablecoin);
-        _setSwapPaths(_initVal.swapPaths.token1ToStablecoin);
-
-        // Set price feeds
-        _setPriceFeed(token0, _initVal.priceFeeds.token0);
-        _setPriceFeed(token1, _initVal.priceFeeds.token1);
-        _setPriceFeed(WETH, _initVal.priceFeeds.eth);
-        _setPriceFeed(stablecoin, _initVal.priceFeeds.stablecoin);
-
-        // Call parent constructor
-        super.__VaultBase_init(_initVal.baseInit, _timelockOwner, _gov);
-    }
-
-    /* State */
-
-    // Key tokens, contracts, and config
-    address public asset;
-    address public token0;
-    address public token1;
-    address public pool;
-
-    /* Setters */
-
-    /// @notice Sets key tokens/contract addresses for this contract
-    /// @param _asset The main asset token
-    /// @param _token0 The first token of the LP pair for this contract
-    /// @param _token1 The second token of the LP pair for this contract
-    /// @param _weth Wrapped ETH token (equivalent native token (e.g. WAVAX, WBNB etc.))
-    /// @param _pool The LP pair address
-    function setTokens(
-        address _asset,
-        address _token0,
-        address _token1,
-        address _weth,
-        address _pool
-    ) external onlyOwner {
-        asset = _asset;
-        token0 = _token0;
-        token1 = _token1;
-        WETH = _weth;
-        pool = _pool;
-    }
-
     /* Functions */
 
     /// @inheritdoc	IVault
+    /// @param _data Encoding format: {pool}{token0}{token1}
     function depositUSD(
         uint256 _amountUSD,
         uint256 _maxSlippageFactor,
-        address _recipient
+        address _recipient,
+        bytes memory _data
     ) external {
         // Call internal deposit func
         _depositUSD(
@@ -94,7 +31,8 @@ contract VaultUniswapV2 is VaultBase, IVaultUniswapV2 {
             _maxSlippageFactor,
             _recipient,
             0, // No relay reimbursement needed as this is not a permit deposit
-            address(0) // Dummy address for reimbursement (see docs)
+            address(0), // Dummy address for reimbursement (see docs)
+            _data
         );
     }
 
@@ -104,8 +42,15 @@ contract VaultUniswapV2 is VaultBase, IVaultUniswapV2 {
         uint256 _maxSlippageFactor,
         address _account,
         uint256 _relayFee,
-        address _relayer
+        address _relayer,
+        bytes memory _data
     ) internal override nonReentrant {
+        // Unpack data
+        (address _pool, address _token0, address _token1) = abi.decode(
+            _data,
+            (address, address, address)
+        );
+
         // Safe transfer IN USD*
         IERC20Upgradeable(stablecoin).safeTransferFrom(
             _account,
@@ -127,36 +72,40 @@ contract VaultUniswapV2 is VaultBase, IVaultUniswapV2 {
         );
 
         // Swap USD* into token0, token1 (if applicable)
-        if (token0 != stablecoin) {
+        if (_token0 != stablecoin) {
             IUniswapV2Router02(router).safeSwap(
                 _balUSD / 2,
-                swapPaths[stablecoin][token0],
+                swapPaths[stablecoin][_token0],
                 priceFeeds[stablecoin],
-                priceFeeds[token0],
+                priceFeeds[_token0],
                 _maxSlippageFactor,
                 address(this)
             );
         }
 
-        if (token1 != stablecoin) {
+        if (_token1 != stablecoin) {
             IUniswapV2Router02(router).safeSwap(
                 _balUSD / 2,
-                swapPaths[stablecoin][token1],
+                swapPaths[stablecoin][_token1],
                 priceFeeds[stablecoin],
-                priceFeeds[token1],
+                priceFeeds[_token1],
                 _maxSlippageFactor,
                 address(this)
             );
         }
 
         // Get token balances
-        uint256 _balToken0 = IERC20Upgradeable(token0).balanceOf(address(this));
-        uint256 _balToken1 = IERC20Upgradeable(token1).balanceOf(address(this));
+        uint256 _balToken0 = IERC20Upgradeable(_token0).balanceOf(
+            address(this)
+        );
+        uint256 _balToken1 = IERC20Upgradeable(_token1).balanceOf(
+            address(this)
+        );
 
         // Add liquidity
         IUniswapV2Router02(router).joinPool(
-            token0,
-            token1,
+            _token0,
+            _token1,
             _balToken0,
             _balToken1,
             _maxSlippageFactor,
@@ -164,14 +113,26 @@ contract VaultUniswapV2 is VaultBase, IVaultUniswapV2 {
         );
 
         // Emit log
-        emit DepositUSD(pool, _amountUSD, _maxSlippageFactor);
+        emit DepositUSD(_pool, _amountUSD, _maxSlippageFactor);
     }
 
     /// @inheritdoc	IVault
-    function withdrawUSD(uint256 _lpShares, uint256 _maxSlippageFactor) external {
+    /// @param _data Encoding format: {pool}{token0}{token1}
+    function withdrawUSD(
+        uint256 _lpShares,
+        uint256 _maxSlippageFactor,
+        bytes memory _data
+    ) external {
         // Call internal withdrawal function
         // Note: 0 for reimbursement because this is not a permit transaction
-        _withdrawUSD(_lpShares, _maxSlippageFactor, _msgSender(), 0, address(0));
+        _withdrawUSD(
+            _lpShares,
+            _maxSlippageFactor,
+            _msgSender(),
+            0,
+            address(0),
+            _data
+        );
     }
 
     /// @inheritdoc VaultBase
@@ -181,10 +142,17 @@ contract VaultUniswapV2 is VaultBase, IVaultUniswapV2 {
         uint256 _maxSlippageFactor,
         address _account,
         uint256 _relayFee,
-        address _relayer
+        address _relayer,
+        bytes memory _data
     ) internal override nonReentrant {
+        // Unpack data
+        (address _pool, address _token0, address _token1) = abi.decode(
+            _data,
+            (address, address, address)
+        );
+
         // Safe Transfer LP tokens IN
-        IERC20Upgradeable(asset).safeTransferFrom(
+        IERC20Upgradeable(_pool).safeTransferFrom(
             _account,
             address(this),
             _lpShares
@@ -193,33 +161,33 @@ contract VaultUniswapV2 is VaultBase, IVaultUniswapV2 {
         // Remove liquidity
         IUniswapV2Router02(router).exitPool(
             _lpShares,
-            pool,
-            token0,
-            token1,
+            _pool,
+            _token0,
+            _token1,
             _maxSlippageFactor,
             address(this)
         );
 
         // Calc balance of Tokens 0,1
-        uint256 _balToken0 = IERC20Upgradeable(token0).balanceOf(address(this));
-        uint256 _balToken1 = IERC20Upgradeable(token1).balanceOf(address(this));
+        uint256 _balToken0 = IERC20Upgradeable(_token0).balanceOf(address(this));
+        uint256 _balToken1 = IERC20Upgradeable(_token1).balanceOf(address(this));
 
         // Swap Tokens 0,1 to USD*
-        if (token0 != stablecoin) {
+        if (_token0 != stablecoin) {
             IUniswapV2Router02(router).safeSwap(
                 _balToken0,
-                swapPaths[token0][stablecoin],
-                priceFeeds[token0],
+                swapPaths[_token0][stablecoin],
+                priceFeeds[_token0],
                 priceFeeds[stablecoin],
                 _maxSlippageFactor,
                 address(this)
             );
         }
-        if (token1 != stablecoin) {
+        if (_token1 != stablecoin) {
             IUniswapV2Router02(router).safeSwap(
                 _balToken1,
-                swapPaths[token1][stablecoin],
-                priceFeeds[token1],
+                swapPaths[_token1][stablecoin],
+                priceFeeds[_token1],
                 priceFeeds[stablecoin],
                 _maxSlippageFactor,
                 address(this)
@@ -240,16 +208,14 @@ contract VaultUniswapV2 is VaultBase, IVaultUniswapV2 {
             _recoupXCFeeFromUSD(_relayFee, _relayer);
 
             // Update remaining USD for withdrawal
-            _balUSD = IERC20Upgradeable(stablecoin).balanceOf(
-                address(this)
-            );
+            _balUSD = IERC20Upgradeable(stablecoin).balanceOf(address(this));
         }
 
         // Transfer USD*
         IERC20Upgradeable(stablecoin).safeTransfer(_account, _balUSD);
 
         // Emit log
-        emit WithdrawUSD(pool, _balUSD, _maxSlippageFactor);
+        emit WithdrawUSD(_pool, _balUSD, _maxSlippageFactor);
     }
 
     /* Meta Transactions */

@@ -39,7 +39,7 @@ abstract contract VaultBase is
     uint256 public constant BP_DENOMINATOR = 10000; // Basis point denominator
     bytes32 private constant _PERMIT_TRANSACT_USD_TYPEHASH =
         keccak256(
-            "TransactUSDPermit(address account,uint256 amount,uint256 maxMarketMovement,uint8 direction,uint256 nonce,uint256 deadline)"
+            "TransactUSDPermit(address account,uint256 amount,uint256 maxMarketMovement,uint8 direction,uint256 nonce,uint256 deadline,bytes data)"
         );
 
     /* Libraries */
@@ -68,6 +68,10 @@ abstract contract VaultBase is
         entranceFeeFactor = _initVal.entranceFeeFactor;
         withdrawFeeFactor = _initVal.withdrawFeeFactor;
         defaultSlippageFactor = 9900; // 1%
+
+        // Set price feeds
+        _setPriceFeed(_initVal.tokenWETH, _initVal.priceFeeds.eth);
+        _setPriceFeed(_initVal.stablecoin, _initVal.priceFeeds.stablecoin);
 
         // Transfer ownership to the timelock controller
         _transferOwnership(_timelockOwner);
@@ -193,9 +197,8 @@ abstract contract VaultBase is
         uint256 _maxSlippageFactor,
         uint8 _direction,
         uint256 _deadline,
-        uint8 _v,
-        bytes32 _r,
-        bytes32 _s
+        bytes memory _data,
+        SigComponents calldata _sigComponents
     ) external whenNotPaused {
         // Init
         uint256 _startGas = gasleft();
@@ -212,13 +215,14 @@ abstract contract VaultBase is
                 _maxSlippageFactor,
                 _direction,
                 _useNonce(_account),
-                _deadline
+                _deadline,
+                _data
             )
         );
         bytes32 _hash = _hashTypedDataV4(_structHash);
 
         // Extract signer from signature
-        address _signer = ECDSAUpgradeable.recover(_hash, _v, _r, _s);
+        address _signer = ECDSAUpgradeable.recover(_hash, _sigComponents.v, _sigComponents.r, _sigComponents.s);
 
         // Check if signer matches sender
         require(_signer == _account, "ZorroVault: invalid signature");
@@ -226,10 +230,24 @@ abstract contract VaultBase is
         // Allow transaction through
         if (_direction == 0) {
             // Deposit
-            _depositUSD(_amount, _maxSlippageFactor, _account, _startGas * tx.gasprice, _msgSender());
+            _depositUSD(
+                _amount,
+                _maxSlippageFactor,
+                _account,
+                _startGas * tx.gasprice,
+                _msgSender(),
+                _data
+            );
         } else if (_direction == 1) {
             // Withdraw
-            _withdrawUSD(_amount, _maxSlippageFactor, _account, _startGas * tx.gasprice, _msgSender());
+            _withdrawUSD(
+                _amount,
+                _maxSlippageFactor,
+                _account,
+                _startGas * tx.gasprice,
+                _msgSender(),
+                _data
+            );
         } else {
             revert("ZorroVault: invalid dir");
         }
@@ -270,15 +288,17 @@ abstract contract VaultBase is
     /// @notice Collects protocol trade fees and sends to treasury
     /// @param _principalAmt The amount to take the fees off of
     /// @param _feeFactor The fee factor (e.g. entranceFeeFactor, withdrawFeeFactor)
-    function _collectTradeFee(uint256 _principalAmt, uint256 _feeFactor) internal {
+    function _collectTradeFee(
+        uint256 _principalAmt,
+        uint256 _feeFactor
+    ) internal {
         // Send fee to treasury if a fee is set
-            if (_feeFactor < BP_DENOMINATOR) {
-                IERC20Upgradeable(stablecoin).safeTransfer(
-                    treasury,
-                    (_principalAmt * (BP_DENOMINATOR - _feeFactor)) /
-                        BP_DENOMINATOR
-                );
-            }
+        if (_feeFactor < BP_DENOMINATOR) {
+            IERC20Upgradeable(stablecoin).safeTransfer(
+                treasury,
+                (_principalAmt * (BP_DENOMINATOR - _feeFactor)) / BP_DENOMINATOR
+            );
+        }
     }
 
     /* Deposits/Withdrawals (abstract) */
@@ -289,12 +309,14 @@ abstract contract VaultBase is
     /// @param _account Where to draw USD funds from
     /// @param _relayFee Gas that needs to be compensated to relayer. Set to 0 if n/a
     /// @param _relayer Where to send gas compensation
+    /// @param _data Data that encodes the pool specific params (e.g. tokens, LP assets, etc.)
     function _depositUSD(
         uint256 _amountUSD,
         uint256 _maxSlippageFactor,
         address _account,
         uint256 _relayFee,
-        address _relayer
+        address _relayer,
+        bytes memory _data
     ) internal virtual;
 
     /// @notice Internal function for USD withdrawals
@@ -303,12 +325,14 @@ abstract contract VaultBase is
     /// @param _account The account holding the tokens to withdraw
     /// @param _relayFee Gas that needs to be compensated to relayer. Set to 0 if n/a
     /// @param _relayer Where to send gas compensation
+    /// @param _data Data that encodes the pool specific params (e.g. tokens, LP assets, etc.)
     function _withdrawUSD(
         uint256 _amount,
         uint256 _maxSlippageFactor,
         address _account,
         uint256 _relayFee,
-        address _relayer
+        address _relayer,
+        bytes memory _data
     ) internal virtual;
 
     /* Maintenance Functions */

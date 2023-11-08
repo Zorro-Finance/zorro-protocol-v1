@@ -302,13 +302,14 @@ contract ControllerXChain is
         address _vault,
         uint256 _valueUSD,
         uint256 _slippageFactor,
-        address _wallet
+        address _wallet,
+        bytes memory _data
     ) public onlyRegEndpoint {
         // Revert to make sure this function never gets called
         require(false, "dummyfunc");
 
         // Satisfy compiler warnings (no execution)
-        _receiveDepositRequest(_vault, _valueUSD, _slippageFactor, _wallet);
+        _receiveDepositRequest(_vault, _valueUSD, _slippageFactor, _wallet, _data);
     }
 
     /// @notice Internal function for receiving and processing deposit request
@@ -320,7 +321,8 @@ contract ControllerXChain is
         address _vault,
         uint256 _valueUSD,
         uint256 _slippageFactor,
-        address _wallet
+        address _wallet,
+        bytes memory _data
     ) internal {
         // Read vault stablecoin
         address _vaultStablecoin = IVault(_vault).stablecoin();
@@ -332,7 +334,7 @@ contract ControllerXChain is
         );
 
         // Deposit USD into vault
-        IVault(_vault).depositUSD(_valueUSD, _slippageFactor, _wallet);
+        IVault(_vault).depositUSD(_valueUSD, _slippageFactor, _wallet, _data);
     }
 
     /* Withdrawals */
@@ -385,7 +387,8 @@ contract ControllerXChain is
         uint256 _amount,
         uint256 _slippageFactor,
         address _dstWallet,
-        uint256 _dstGasForCall
+        uint256 _dstGasForCall,
+        bytes memory _data
     ) external payable nonReentrant {
         // Call internal function directly
         _sendWithdrawalRequest(
@@ -400,16 +403,17 @@ contract ControllerXChain is
                 dstGasForCall: _dstGasForCall,
                 feeToReimburse: 0, // No fee to reimburse
                 refundAddress: _msgSender()
-            })
+            }),
+            _data
         );
     }
 
     /// @notice Internal function for sending withdrawal request
     /// @dev Allows for extra functionality for the permit flow
     /// @param _req A XCRequest struct to initiate the cross chain tx
-    function _sendWithdrawalRequest(XCRequest memory _req) internal {
+    function _sendWithdrawalRequest(XCRequest memory _req, bytes memory _data) internal {
         // Perform withdraw USD operation
-        IVault(_req.vault).withdrawUSD(_req.amount, _req.slippageFactor);
+        IVault(_req.vault).withdrawUSD(_req.amount, _req.slippageFactor, _data);
 
         // Get USD balance
         uint256 _balUSD = IERC20Upgradeable(stablecoin).balanceOf(
@@ -509,8 +513,8 @@ contract ControllerXChain is
         // Match to appropriate func
         if (this.receiveDepositRequest.selector == _funcSig) {
             // Decode params
-            (address _vault, , uint256 _slippageFactor, address _wallet) = abi
-                .decode(_paramsPayload, (address, uint256, uint256, address));
+            (address _vault, , uint256 _slippageFactor, address _wallet, bytes memory _data) = abi
+                .decode(_paramsPayload, (address, uint256, uint256, address, bytes));
 
             // Determine stablecoin expected by vault
             address _vaultStablecoin = IVault(_vault).stablecoin();
@@ -543,7 +547,8 @@ contract ControllerXChain is
                 _vault,
                 _balVaultStablecoin,
                 _slippageFactor,
-                _wallet
+                _wallet,
+                _data
             );
         } else if (this.receiveWithdrawalRequest.selector == _funcSig) {
             // Decode params from payload
@@ -597,6 +602,7 @@ contract ControllerXChain is
         XCPermitRequest calldata _request,
         uint8 _direction,
         uint256 _deadline,
+        bytes memory _data,
         SigComponents calldata _sigComponents
     ) external payable nonReentrant {
         // Init
@@ -696,7 +702,8 @@ contract ControllerXChain is
                     dstGasForCall: _request.dstGasForCall,
                     feeToReimburse: msg.value + _startGas * tx.gasprice,
                     refundAddress: _msgSender()
-                })
+                }),
+                _data
             );
         } else {
             revert("ZorroXC: invalid dir");

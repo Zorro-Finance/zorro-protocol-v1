@@ -8,6 +8,7 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 /// @notice Interface for all vaults
 interface IVault {
     /* Events */
+
     event DepositUSD(
         address indexed _pool,
         uint256 indexed _amountUSD,
@@ -27,13 +28,25 @@ interface IVault {
 
     /* Structs */
 
+    struct VaultPriceFeeds {
+        address eth;
+        address stablecoin;
+    }
+
     struct VaultInit {
+        VaultPriceFeeds priceFeeds;
         address treasury;
         address router;
         address stablecoin;
         address tokenWETH;
         uint256 entranceFeeFactor;
         uint256 withdrawFeeFactor;
+    }
+
+    struct SigComponents {
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
     }
 
     /* Functions */
@@ -80,18 +93,22 @@ interface IVault {
     /// @param _amountUSD The amount of USD to deposit
     /// @param _maxSlippageFactor Max amount of slippage tolerated per UniswapV2 operation (9900 = 1%)
     /// @param _recipient Where the received tokens should be sent to
+    /// @param _data Data that encodes the pool specific params (e.g. tokens, LP assets, etc.)
     function depositUSD(
         uint256 _amountUSD,
         uint256 _maxSlippageFactor,
-        address _recipient
+        address _recipient,
+        bytes memory _data
     ) external;
 
     /// @notice Withdraws main asset, converts to USD*, and sends back to sender
     /// @param _amount The number of units of the main asset to withdraw (e.g. LP tokens) (Units will vary so see child contract)
     /// @param _maxSlippageFactor Max amount of slippage tolerated per UniswapV2 operation (9900 = 1%)
+    /// @param _data Data that encodes the pool specific params (e.g. tokens, LP assets, etc.)
     function withdrawUSD(
         uint256 _amount, 
-        uint256 _maxSlippageFactor
+        uint256 _maxSlippageFactor,
+        bytes memory _data
     ) external;
 
     /// @notice Performs gasless deposits/withdrawals from/to USD using a signature
@@ -102,18 +119,16 @@ interface IVault {
     /// @param _maxSlippageFactor Max amount of slippage tolerated per UniswapV2 operation (9900 = 1%)
     /// @param _direction 0 for deposit and 1 for withdrawal
     /// @param _deadline Deadline for signature to be valid
-    /// @param _v Elliptical sig param v
-    /// @param _r Elliptical sig param r
-    /// @param _s Elliptical sig param s
+    /// @param _data Data that encodes the pool specific params (e.g. tokens, LP assets, etc.)
+    /// @param _sigComponents Elliptical sig params
     function transactUSDWithPermit(
         address _account,
         uint256 _amount,
         uint256 _maxSlippageFactor,
         uint8 _direction,
         uint256 _deadline,
-        uint8 _v,
-        bytes32 _r,
-        bytes32 _s
+        bytes memory _data,
+        SigComponents calldata _sigComponents
     ) external;
 
     // Token operations

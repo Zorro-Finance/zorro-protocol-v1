@@ -155,11 +155,13 @@ interface IControllerXChain is IStargateReceiver {
     /// @param _valueUSD The amount of USD to deposit
     /// @param _slippageFactor Acceptable degree of slippage on any transaction (e.g. 9500 = 5%, 9900 = 1% etc.)
     /// @param _wallet The wallet on the current (receiving) chain that should receive the vault token upon deposit
+    /// @param _data Data that encodes the pool specific params (e.g. tokens, LP assets, etc.)
     function receiveDepositRequest(
         address _vault,
         uint256 _valueUSD,
         uint256 _slippageFactor,
-        address _wallet
+        address _wallet,
+        bytes memory _data
     ) external;
 
     /* Withdrawals */
@@ -193,6 +195,7 @@ interface IControllerXChain is IStargateReceiver {
     /// @param _slippageFactor Acceptable degree of slippage on any transaction (e.g. 9500 = 5%, 9900 = 1% etc.)
     /// @param _dstWallet The address on the remote chain to send bridged funds to
     /// @param _dstGasForCall Amount of gas to spend on the cross chain transaction
+    /// @param _data Data that encodes the pool specific params (e.g. tokens, LP assets, etc.)
     function sendWithdrawalRequest(
         uint16 _dstChain,
         uint256 _dstPoolId,
@@ -201,7 +204,8 @@ interface IControllerXChain is IStargateReceiver {
         uint256 _amount,
         uint256 _slippageFactor,
         address _dstWallet,
-        uint256 _dstGasForCall
+        uint256 _dstGasForCall,
+        bytes memory _data
     ) external payable;
 
     /// @notice Dummy function for receiving withdrawn funds on a remote chain
@@ -219,11 +223,13 @@ interface IControllerXChain is IStargateReceiver {
     /// @param _request XCPermitRequest struct containing the cross chain instructions
     /// @param _direction 0 for deposit and 1 for withdrawal
     /// @param _deadline Deadline for signature to be valid
+    /// @param _data Data that encodes the pool specific params (e.g. tokens, LP assets, etc.)
     /// @param _sigComponents Elliptical sig params: v, r, s
     function requestWithPermit(
         XCPermitRequest calldata _request,
         uint8 _direction,
         uint256 _deadline,
+        bytes memory _data,
         SigComponents calldata _sigComponents
     ) external payable;
 }
