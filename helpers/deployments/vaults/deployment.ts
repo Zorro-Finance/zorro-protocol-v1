@@ -1,31 +1,31 @@
 import { getISODateTime, recordDeployment, writeCSV } from "../utilities";
 import _ from 'lodash';
 
-interface VaultAMMRecordCSV {
+interface VaultRecordCSV {
+    vaultName: string;
     vaultContractClass: string;
     network: string;
     protocol: string;
-    pool: string;
     deploymentAddress: string;
     source: string;
     date: string;
 }
 
 export const recordVaultDeployment = async (
+    vaultName: string,
     vaultContractClass: string,
     network: string,
     protocol: string,
-    pool: string,
     deploymentAddress: string,
     source: string
 ) => {
     // Prep path and record
     const path = 'deployments/vaults.lock';
-    const record: VaultAMMRecordCSV = {
+    const record: VaultRecordCSV = {
+        vaultName,
         vaultContractClass,
         network,
         protocol,
-        pool,
         deploymentAddress,
         source,
         date: getISODateTime(),

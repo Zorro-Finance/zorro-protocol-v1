@@ -78,7 +78,6 @@ describe('VaultAMMBase', () => {
             const asset = await vault.asset();
             const token0 = await vault.token0();
             const token1 = await vault.token1();
-            const farmContract = await vault.farmContract();
             const rewardsToken = await vault.rewardsToken();
             const isFarmable = await vault.isFarmable();
             const pid = await vault.pid();

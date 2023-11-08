@@ -33,9 +33,9 @@ const contractInits: ContractInitList<VaultAMMInit> = {
     },
 };
 
-export const deploymentArgs = (chain: string, pool: string, timelockOwner: string, gov: string) => {
+export const deploymentArgs = (chain: string, timelockOwner: string, gov: string) => {
     return [
-        contractInits[chain][pool],
+        contractInits[chain][pool], // TODO: Remove pool
         timelockOwner,
         gov
     ];
