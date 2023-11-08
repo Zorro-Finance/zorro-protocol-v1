@@ -10,7 +10,7 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 import "./PriceFeed.sol";
 
-import "../interfaces/Uniswap/IAMMRouter02.sol";
+import "../interfaces/Uniswap/IUniswapV2Router02.sol";
 
 /// @title SafeSwapUni
 /// @notice Library for safe swapping of ERC20 tokens for Uniswap/Pancakeswap style protocols
@@ -32,7 +32,7 @@ library SafeSwapUni {
     /// @param _maxSlippageFactor The max slippage factor tolerated (9900 = 1%)
     /// @param _destination Where to send the swapped token to
     function safeSwap(
-        IAMMRouter02 _uniRouter,
+        IUniswapV2Router02 _uniRouter,
         uint256 _amountIn,
         address[] memory _swapPath,
         AggregatorV3Interface _priceFeedStart,
@@ -80,7 +80,7 @@ library SafeSwapUni {
     /// @param _to The destination to send the swapped token to
     /// @param _deadline How much time to allow for the transaction
     function _safeSwap(
-        IAMMRouter02 _uniRouter,
+        IUniswapV2Router02 _uniRouter,
         uint256 _amountIn,
         uint256[] memory _priceTokens,
         uint256 _slippageFactor,
@@ -118,7 +118,7 @@ library SafeSwapUni {
     }
 
     /// @notice Prepares token price data by attempting to use price feed oracle
-    /// @dev Will assign price of zero in the absence of a feed. Subsequent funcs will need to recognize this and use the AMM price or some other source
+    /// @dev Will assign price of zero in the absence of a feed. Subsequent funcs will need to recognize this and use the UniswapV2 price or some other source
     /// @param _startToken The origin token (to swap FROM)
     /// @param _endToken The destination token (to swap TO)
     /// @param _priceFeedStart The Chainlink compatible price feed of the start token
@@ -157,7 +157,7 @@ library SafeSwapUni {
     }
 
     /// @notice Calculate min amount out (account for slippage)
-    /// @dev Tries to calculate based on price feed oracle if present, or via the AMM router
+    /// @dev Tries to calculate based on price feed oracle if present, or via the UniswapV2 router
     /// @param _uniRouter Uniswap V2 router
     /// @param _amountIn The quantity of the origin token to swap
     /// @param _path The path to take for the swap
@@ -166,7 +166,7 @@ library SafeSwapUni {
     /// @param _slippageFactor The maximum slippage factor tolerated for this swap
     /// @return amountOut Minimum amount of output token to expect
     function _getAmountOut(
-        IAMMRouter02 _uniRouter,
+        IUniswapV2Router02 _uniRouter,
         uint256 _amountIn,
         address[] memory _path,
         uint8[] memory _decimals,
@@ -218,7 +218,7 @@ library SafeSwapUni {
     /// @param _slippageFactor Slippage tolerance (9900 = 1%)
     /// @return amountOut The quantity of tokens expected to receive as output
     function _getAmountOutWithoutExchangeRates(
-        IAMMRouter02 _uniRouter,
+        IUniswapV2Router02 _uniRouter,
         uint256 _amountIn,
         address[] memory _path,
         uint256 _slippageFactor

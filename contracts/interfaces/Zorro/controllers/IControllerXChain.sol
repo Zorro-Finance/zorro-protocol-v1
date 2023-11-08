@@ -129,7 +129,7 @@ interface IControllerXChain is IStargateReceiver {
     ) external view returns (uint256 nativeFee);
 
     /// @notice Prepares and sends a cross chain deposit request. Takes care of necessary financial ops (transfer/locking USD)
-    /// @dev Requires appropriate fee to be paid via msg.value
+    /// @dev Requires appropriate fee to be paid via msg.value and allowance of USD on this contract
     /// @param _dstChain LZ chain ID of the destination chain
     /// @param _dstPoolId The Stargate Pool ID to swap with on the remote chain
     /// @param _remoteControllerXChain Zorro ControllerXChain contract address on remote chain
@@ -184,11 +184,12 @@ interface IControllerXChain is IStargateReceiver {
     ) external view returns (uint256 nativeFee);
 
     /// @notice Withdraws funds on chain and bridges to a destination wallet on a remote chain
+    /// @dev Requires approval of asset token on the vault contract
     /// @param _dstChain The remote LZ chain ID to bridge funds to
     /// @param _dstPoolId The pool ID to swap tokens on the remote chain
     /// @param _remoteControllerXChain The ControllerXChain contract on the remote chain
     /// @param _vault Vault address on current chain to withdraw funds from
-    /// @param _shares Number of shares of the vault to withdraw
+    /// @param _amount Number of tokens of the vault to withdraw
     /// @param _slippageFactor Acceptable degree of slippage on any transaction (e.g. 9500 = 5%, 9900 = 1% etc.)
     /// @param _dstWallet The address on the remote chain to send bridged funds to
     /// @param _dstGasForCall Amount of gas to spend on the cross chain transaction
@@ -197,7 +198,7 @@ interface IControllerXChain is IStargateReceiver {
         uint256 _dstPoolId,
         bytes calldata _remoteControllerXChain,
         address _vault,
-        uint256 _shares,
+        uint256 _amount,
         uint256 _slippageFactor,
         address _dstWallet,
         uint256 _dstGasForCall

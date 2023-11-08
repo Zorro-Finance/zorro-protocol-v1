@@ -2,9 +2,9 @@
 
 pragma solidity >=0.6.12 <0.9.0;
 
-import "./IAMMRouter01.sol";
+import "./IUniswapV2Router01.sol";
 
-interface IAMMRouter02 is IAMMRouter01 {
+interface IUniswapV2Router02 is IUniswapV2Router01 {
     function removeLiquidityETHSupportingFeeOnTransferTokens(
         address token,
         uint256 liquidity,

@@ -51,9 +51,9 @@ contract ControllerXChain is
 
     /* Libraries */
 
-    using SafeSwapUni for IAMMRouter02;
+    using SafeSwapUni for IUniswapV2Router02;
     using SafeERC20Upgradeable for IERC20Upgradeable;
-    using LPUtility for IAMMRouter02;
+    using LPUtility for IUniswapV2Router02;
     using CountersUpgradeable for CountersUpgradeable.Counter;
 
     /* Constructor */
@@ -332,15 +332,7 @@ contract ControllerXChain is
         );
 
         // Deposit USD into vault
-        IVault(_vault).depositUSD(_valueUSD, _slippageFactor);
-
-        // Get quantity of received shares
-        uint256 _receivedShares = IERC20Upgradeable(_vault).balanceOf(
-            address(this)
-        );
-
-        // Send resulting shares to specified wallet
-        IERC20Upgradeable(_vault).safeTransfer(_wallet, _receivedShares);
+        IVault(_vault).depositUSD(_valueUSD, _slippageFactor, _wallet);
     }
 
     /* Withdrawals */
@@ -390,18 +382,11 @@ contract ControllerXChain is
         uint256 _dstPoolId,
         bytes calldata _remoteControllerXChain,
         address _vault,
-        uint256 _shares,
+        uint256 _amount,
         uint256 _slippageFactor,
         address _dstWallet,
         uint256 _dstGasForCall
     ) external payable nonReentrant {
-        // Safe transfer IN the vault tokens
-        IERC20Upgradeable(_vault).safeTransferFrom(
-            _msgSender(),
-            address(this),
-            _shares
-        );
-
         // Call internal function directly
         _sendWithdrawalRequest(
             XCRequest({
@@ -409,7 +394,7 @@ contract ControllerXChain is
                 dstPoolId: _dstPoolId,
                 remoteControllerXChain: _remoteControllerXChain,
                 vault: _vault,
-                amount: _shares,
+                amount: _amount,
                 slippageFactor: _slippageFactor,
                 dstWallet: _dstWallet,
                 dstGasForCall: _dstGasForCall,
@@ -423,12 +408,6 @@ contract ControllerXChain is
     /// @dev Allows for extra functionality for the permit flow
     /// @param _req A XCRequest struct to initiate the cross chain tx
     function _sendWithdrawalRequest(XCRequest memory _req) internal {
-        // Approve spending
-        IERC20Upgradeable(_req.vault).safeIncreaseAllowance(
-            _req.vault,
-            _req.amount
-        );
-
         // Perform withdraw USD operation
         IVault(_req.vault).withdrawUSD(_req.amount, _req.slippageFactor);
 
@@ -544,7 +523,7 @@ contract ControllerXChain is
                 _swapPath[1] = _vaultStablecoin;
 
                 // Perform swap
-                IAMMRouter02(router).safeSwap(
+                IUniswapV2Router02(router).safeSwap(
                     _tokenBal,
                     _swapPath,
                     stablecoinPriceFeed,
@@ -662,7 +641,7 @@ contract ControllerXChain is
         if (_direction == 0) {
             // Deposit
 
-            // Safe transfer vault shares IN
+            // Safe transfer USD IN
             IERC20Upgradeable(stablecoin).safeTransferFrom(
                 _request.originWallet,
                 address(this),

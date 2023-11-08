@@ -2,8 +2,6 @@
 
 pragma solidity ^0.8.18;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -12,7 +10,11 @@ import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
-import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/draft-ERC20PermitUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
+
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+
+import "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
 
 import "../interfaces/Zorro/vaults/IVault.sol";
 
@@ -25,12 +27,12 @@ import "../libraries/SafeSwapETH.sol";
 /// @title VaultBase
 /// @notice Base contract for all vaults
 abstract contract VaultBase is
-    ERC20Upgradeable,
     OwnableUpgradeable,
     PausableUpgradeable,
     ReentrancyGuardUpgradeable,
-    ERC20PermitUpgradeable,
-    IVault
+    IVault,
+    UUPSUpgradeable,
+    EIP712Upgradeable
 {
     /* Constants */
 
@@ -44,7 +46,8 @@ abstract contract VaultBase is
 
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using PriceFeed for AggregatorV3Interface;
-    using SafeSwapUni for IAMMRouter02;
+    using SafeSwapUni for IUniswapV2Router02;
+    using CountersUpgradeable for CountersUpgradeable.Counter;
 
     /* Constructor */
 
@@ -72,11 +75,8 @@ abstract contract VaultBase is
         // Governor
         gov = _gov;
 
-        // Call the ERC20 constructor to set initial values
-        super.__ERC20_init("ZOR LP Vault", "ZLPV");
-
-        // Call the ERC20Permit constructor with the same token name (must match above)
-        super.__ERC20Permit_init("ZOR LP Vault");
+        // EIP712 init
+        _initEIP712();
     }
 
     /* State */
@@ -137,7 +137,7 @@ abstract contract VaultBase is
         defaultSlippageFactor = _slippageFactor;
     }
 
-    /// @notice Sets swap paths for AMM swaps
+    /// @notice Sets swap paths for UniswapV2 swaps
     /// @param _path The array of tokens representing the swap path
     function setSwapPaths(address[] memory _path) external onlyOwner {
         _setSwapPaths(_path);
@@ -235,6 +235,17 @@ abstract contract VaultBase is
         }
     }
 
+    /// @notice "Consume a nonce": return the current value and increment.
+    /// @param _owner Address of the signer
+    /// @return current Current nonce value
+    function _useNonce(
+        address _owner
+    ) internal virtual returns (uint256 current) {
+        CountersUpgradeable.Counter storage _nonce = _nonces[_owner];
+        current = _nonce.current();
+        _nonce.increment();
+    }
+
     /// @notice Swaps USD to ETH to compensate relayer for XC fee spent
     /// @param _fee The amount of ETH used for the XC fee
     /// @param _relayer The address of the relayer to compensate
@@ -256,6 +267,20 @@ abstract contract VaultBase is
         );
     }
 
+    /// @notice Collects protocol trade fees and sends to treasury
+    /// @param _principalAmt The amount to take the fees off of
+    /// @param _feeFactor The fee factor (e.g. entranceFeeFactor, withdrawFeeFactor)
+    function _collectTradeFee(uint256 _principalAmt, uint256 _feeFactor) internal {
+        // Send fee to treasury if a fee is set
+            if (_feeFactor < BP_DENOMINATOR) {
+                IERC20Upgradeable(stablecoin).safeTransfer(
+                    treasury,
+                    (_principalAmt * (BP_DENOMINATOR - _feeFactor)) /
+                        BP_DENOMINATOR
+                );
+            }
+    }
+
     /* Deposits/Withdrawals (abstract) */
 
     /// @notice Internal function for depositing USD
@@ -273,13 +298,13 @@ abstract contract VaultBase is
     ) internal virtual;
 
     /// @notice Internal function for USD withdrawals
-    /// @param _shares The number of shares to withdraw
+    /// @param _amount The quantity to withdraw
     /// @param _maxSlippageFactor Slippage tolerance (9900 = 1%)
-    /// @param _account The account holding the shares to withdraw
+    /// @param _account The account holding the tokens to withdraw
     /// @param _relayFee Gas that needs to be compensated to relayer. Set to 0 if n/a
     /// @param _relayer Where to send gas compensation
     function _withdrawUSD(
-        uint256 _shares,
+        uint256 _amount,
         uint256 _maxSlippageFactor,
         address _account,
         uint256 _relayFee,
@@ -297,4 +322,10 @@ abstract contract VaultBase is
     function unpause() public virtual onlyAllowGov {
         _unpause();
     }
+
+    /* Meta Transactions */
+
+    /// @notice Internal function for initializing the EIP712 constructor
+    /// @dev Domain hash veries by contract so this is marked as abstract
+    function _initEIP712() internal virtual;
 }

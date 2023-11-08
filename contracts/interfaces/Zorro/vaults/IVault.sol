@@ -10,30 +10,15 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 /// @notice Interface for all vaults
 interface IVault is IERC20Upgradeable {
     /* Events */
-
-    event DepositAsset(
-        address indexed _pool,
-        uint256 indexed _amount,
-        uint256 indexed _sharesAdded
-    );
-
     event DepositUSD(
         address indexed _pool,
         uint256 indexed _amountUSD,
-        uint256 indexed _sharesAdded,
         uint256 _maxSlippageFactor
-    );
-
-    event WithdrawAsset(
-        address indexed _pool,
-        uint256 indexed _shares,
-        uint256 indexed _amountAssetRemoved
     );
 
     event WithdrawUSD(
         address indexed _pool,
         uint256 indexed _amountUSD,
-        uint256 indexed _sharesRemoved,
         uint256 _maxSlippageFactor
     );
 
@@ -93,33 +78,30 @@ interface IVault is IERC20Upgradeable {
 
     // Cash flow operations
 
-    /// @notice Deposits main asset token into vault
-    /// @param _amount The amount of asset to deposit
-    function deposit(uint256 _amount) external;
-
     /// @notice Converts USD* to main asset and deposits it
     /// @param _amountUSD The amount of USD to deposit
-    /// @param _maxSlippageFactor Max amount of slippage tolerated per AMM operation (9900 = 1%)
+    /// @param _maxSlippageFactor Max amount of slippage tolerated per UniswapV2 operation (9900 = 1%)
+    /// @param _recipient Where the received tokens should be sent to
     function depositUSD(
         uint256 _amountUSD,
-        uint256 _maxSlippageFactor
+        uint256 _maxSlippageFactor,
+        address _recipient
     ) external;
 
-    /// @notice Withdraws main asset and sends back to sender
-    /// @param _shares The number of shares of the main asset to withdraw
-    function withdraw(uint256 _shares) external;
-
     /// @notice Withdraws main asset, converts to USD*, and sends back to sender
-    /// @param _shares The number of shares of the main asset to withdraw
-    /// @param _maxSlippageFactor Max amount of slippage tolerated per AMM operation (9900 = 1%)
-    function withdrawUSD(uint256 _shares, uint256 _maxSlippageFactor) external;
+    /// @param _amount The number of units of the main asset to withdraw (e.g. LP tokens) (Units will vary so see child contract)
+    /// @param _maxSlippageFactor Max amount of slippage tolerated per UniswapV2 operation (9900 = 1%)
+    function withdrawUSD(
+        uint256 _amount, 
+        uint256 _maxSlippageFactor
+    ) external;
 
     /// @notice Performs gasless deposits/withdrawals from/to USD using a signature
     /// @dev WARNING This function reimburses the relayer based on the gas sent with the tx. Therefore, please only sign using trusted 
     /// dApps or their relayers could collect excess gas reimbursement.
     /// @param _account Account that is signing this transaction
-    /// @param _amount The amount of USD (for deposits) or shares (for withdrawals)
-    /// @param _maxSlippageFactor Max amount of slippage tolerated per AMM operation (9900 = 1%)
+    /// @param _amount The amount of USD (for deposits) or tokens (for withdrawals)
+    /// @param _maxSlippageFactor Max amount of slippage tolerated per UniswapV2 operation (9900 = 1%)
     /// @param _direction 0 for deposit and 1 for withdrawal
     /// @param _deadline Deadline for signature to be valid
     /// @param _v Elliptical sig param v
