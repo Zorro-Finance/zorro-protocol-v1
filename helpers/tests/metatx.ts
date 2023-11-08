@@ -52,7 +52,8 @@ export async function getTransactPermitSignature(
     vault: Contract,
     amount: BigNumber,
     maxSlippageFactor: BigNumberish,
-    direction: 'deposit' | 'withdraw'
+    direction: 'deposit' | 'withdraw',
+    data: string
 ) {
     // Get chain
     const { chainId } = await signer.provider!.getNetwork();
@@ -72,6 +73,7 @@ export async function getTransactPermitSignature(
             { name: 'direction', type: 'uint8' },
             { name: 'nonce', type: 'uint256' },
             { name: 'deadline', type: 'uint256' },
+            { name: 'data', type: 'bytes' },
         ],
     };
     const nonce = await vault.nonces(signer.address);
@@ -84,6 +86,7 @@ export async function getTransactPermitSignature(
         direction: direction === 'deposit' ? 0 : 1,
         nonce,
         deadline,
+        data,
     };
 
     // Calculate and return serialized and split sigs

@@ -27,16 +27,16 @@ describe('ControllerXChain', () => {
         return { controller, owner, otherAccount };
     }
 
-    async function deployVaultAMMBaseFixture() {
+    async function deployVaultUniswapV2BaseFixture() {
         // Contracts are deployed using the first signer/account by default
         const [owner, otherAccount] = await ethers.getSigners();
 
         // Get init arguments for contract deployment
-        const initArgs: any[] = deploymentArgsVault('avalanche', 'TJ_AVAX_USDC', owner.address, owner.address);
+        const initArgs: any[] = deploymentArgsVault('avalanche', owner.address, owner.address);
         initArgs[0].isFarmable = true; // Override
 
         // Get contract factory
-        const Vault = await ethers.getContractFactory('TraderJoeAMMV1');
+        const Vault = await ethers.getContractFactory('TraderJoeAMMV1'); // TODO
         const beacon = await upgrades.deployBeacon(Vault);
         await beacon.deployed();
 
@@ -262,7 +262,7 @@ describe('ControllerXChain', () => {
 
             // Get contracts
             const { controller, owner } = await loadFixture(deployControllerXChainFixture);
-            const { vault } = await loadFixture(deployVaultAMMBaseFixture);
+            const { vault } = await loadFixture(deployVaultUniswapV2BaseFixture);
 
             // Get assets
             await getAssets(ethers.utils.parseEther('10'));
@@ -362,7 +362,7 @@ describe('ControllerXChain', () => {
 
             // Contracts
             const { controller, owner } = await loadFixture(deployControllerXChainFixture);
-            const { vault } = await loadFixture(deployVaultAMMBaseFixture);
+            const { vault } = await loadFixture(deployVaultUniswapV2BaseFixture);
 
             // Get USD
             await getAssets(ethers.utils.parseEther('10'));
@@ -425,7 +425,7 @@ describe('ControllerXChain', () => {
 
             // Get contracts
             const { controller, owner, otherAccount } = await loadFixture(deployControllerXChainFixture);
-            const { vault } = await loadFixture(deployVaultAMMBaseFixture);
+            const { vault } = await loadFixture(deployVaultUniswapV2BaseFixture);
 
             // Get assets
             await getAssets(ethers.utils.parseEther('10'));
@@ -479,7 +479,7 @@ describe('ControllerXChain', () => {
     describe('Gasless', () => {
         it('Deposits USD as a meta transaction, cross chain', async () => {
             // Prep
-            const { vault, owner } = await loadFixture(deployVaultAMMBaseFixture);
+            const { vault, owner } = await loadFixture(deployVaultUniswapV2BaseFixture);
             const { controller } = await loadFixture(deployControllerXChainFixture);
             const dstChain = 102; // BNB
             const dstPoolId = 5; // BUSD
@@ -581,7 +581,7 @@ describe('ControllerXChain', () => {
         it('Withdraws shares to USD as a meta transaction, cross chain', async () => {
             // Prep
             const { controller, owner } = await loadFixture(deployControllerXChainFixture);
-            const { vault } = await loadFixture(deployVaultAMMBaseFixture);
+            const { vault } = await loadFixture(deployVaultUniswapV2BaseFixture);
             const maxMarketMovement = 9900; // Slippage: 1%
             const dstChain = 102; // BNB
             const dstPoolId = 5; // BUSD

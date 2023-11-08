@@ -168,7 +168,8 @@ contract ControllerXChain is
         address _vault,
         uint256 _valueUSD,
         uint256 _slippageFactor,
-        address _wallet
+        address _wallet,
+        bytes memory _data
     ) external pure returns (bytes memory payload) {
         // Calculate method signature
         bytes4 _sig = this.receiveDepositRequest.selector;
@@ -178,7 +179,8 @@ contract ControllerXChain is
             _vault,
             _valueUSD,
             _slippageFactor,
-            _wallet
+            _wallet,
+            _data
         );
 
         // Concatenate bytes of signature and inputs
@@ -219,7 +221,8 @@ contract ControllerXChain is
         address _dstWallet,
         uint256 _amountUSD,
         uint256 _slippageFactor,
-        uint256 _dstGasForCall
+        uint256 _dstGasForCall,
+        bytes memory _data
     ) external payable nonReentrant {
         // Require funds to be submitted with this message
         require(msg.value > 0, "No fees submitted");
@@ -243,7 +246,8 @@ contract ControllerXChain is
                 slippageFactor: _slippageFactor,
                 dstGasForCall: _dstGasForCall,
                 feeToReimburse: 0, // Not sent from a meta TX relayer so no reimbursement required
-                refundAddress: _msgSender()
+                refundAddress: _msgSender(),
+                data: _data
             }),
             msg.value
         );
@@ -278,7 +282,8 @@ contract ControllerXChain is
             _req.vault,
             _remainingUSD,
             _req.slippageFactor,
-            _req.dstWallet
+            _req.dstWallet,
+            _req.data
         );
 
         // Call stargate to initiate bridge
@@ -402,18 +407,18 @@ contract ControllerXChain is
                 dstWallet: _dstWallet,
                 dstGasForCall: _dstGasForCall,
                 feeToReimburse: 0, // No fee to reimburse
-                refundAddress: _msgSender()
-            }),
-            _data
+                refundAddress: _msgSender(),
+                data: _data
+            })
         );
     }
 
     /// @notice Internal function for sending withdrawal request
     /// @dev Allows for extra functionality for the permit flow
     /// @param _req A XCRequest struct to initiate the cross chain tx
-    function _sendWithdrawalRequest(XCRequest memory _req, bytes memory _data) internal {
+    function _sendWithdrawalRequest(XCRequest memory _req) internal {
         // Perform withdraw USD operation
-        IVault(_req.vault).withdrawUSD(_req.amount, _req.slippageFactor, _data);
+        IVault(_req.vault).withdrawUSD(_req.amount, _req.slippageFactor, _req.data);
 
         // Get USD balance
         uint256 _balUSD = IERC20Upgradeable(stablecoin).balanceOf(
@@ -602,7 +607,6 @@ contract ControllerXChain is
         XCPermitRequest calldata _request,
         uint8 _direction,
         uint256 _deadline,
-        bytes memory _data,
         SigComponents calldata _sigComponents
     ) external payable nonReentrant {
         // Init
@@ -673,7 +677,8 @@ contract ControllerXChain is
                     slippageFactor: _request.slippageFactor,
                     dstGasForCall: _request.dstGasForCall,
                     feeToReimburse: msg.value + _startGas * tx.gasprice,
-                    refundAddress: _msgSender() // Set refund address to the relayer
+                    refundAddress: _msgSender(), // Set refund address to the relayer
+                    data: _request.data
                 }),
                 msg.value
             );
@@ -701,9 +706,9 @@ contract ControllerXChain is
                     dstWallet: _request.dstWallet,
                     dstGasForCall: _request.dstGasForCall,
                     feeToReimburse: msg.value + _startGas * tx.gasprice,
-                    refundAddress: _msgSender()
-                }),
-                _data
+                    refundAddress: _msgSender(),
+                    data: _request.data
+                })
             );
         } else {
             revert("ZorroXC: invalid dir");

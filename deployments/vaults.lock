@@ -1,3 +1,1 @@
 vault_contract_class,network,protocol,pool,deployment_address,source,date
-TraderJoeAMMV1,avalanche,traderjoe,TJ_AVAX_USDC,0x107BBf586A972229E1Dd0076890B035EB4585EC3,deploy_002.ts,2023-08-30T13:20:25.225Z
-SushiSwapAMM,matic,sushiswap,SUSHI_WMATIC_WETH,0x1277679Cb5EB2979B3830E9700A3b0327A09149F,deploy_003.ts,2023-09-25T12:04:18.971Z

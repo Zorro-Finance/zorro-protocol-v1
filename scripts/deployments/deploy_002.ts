@@ -10,7 +10,7 @@ async function main() {
   // Init
   const network = hre.network.name as PublicNetwork;
 
-  // Deploy initial AMM vaults
+  // Deploy initial UniswapV2 vaults
   const vaultContractClass = 'VaultUniswapV2';
   const vaultName = 'VaultUniswapV2';
 
