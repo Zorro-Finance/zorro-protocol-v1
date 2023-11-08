@@ -2,13 +2,11 @@
 
 pragma solidity ^0.8.18;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 /// @title IVault
 /// @notice Interface for all vaults
-interface IVault is IERC20Upgradeable {
+interface IVault {
     /* Events */
     event DepositUSD(
         address indexed _pool,

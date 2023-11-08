@@ -260,4 +260,8 @@ contract VaultUniswapV2 is VaultBase, IVaultUniswapV2 {
     function _initEIP712() internal override {
         EIP712Upgradeable.__EIP712_init("ZVault UniswapV2", "1");
     }
+
+    /* Proxy implementations */
+
+    function _authorizeUpgrade(address) internal override onlyOwner {}
 }
