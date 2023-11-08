@@ -1,7 +1,7 @@
 import { time, loadFixture, mine } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
-import { deploymentArgs } from '../../helpers/deployments/vaults/VaultAMM/TraderJoe/deployment';
+import { deploymentArgs } from '../../helpers/deployments/vaults/VaultUniswapV2/deployment';
 import { chains } from "../../helpers/constants";
 import { BigNumber } from "ethers";
 import { getPermitSignature, getTransactPermitSignature } from "../../helpers/tests/metatx";

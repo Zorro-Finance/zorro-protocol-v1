@@ -1,9 +1,10 @@
-import { deploymentArgs } from '../../helpers/deployments/vaults/VaultAMM/TraderJoe/deployment';
-import { deployVault } from "../../helpers/deployments/vaults/VaultAMM/deployment";
+
 import hre from 'hardhat';
 import { chains } from "../../helpers/constants";
 import { basename } from 'path';
 import { PublicNetwork } from '../../helpers/types';
+import { deploymentArgs } from "../../helpers/deployments/vaults/VaultUniswapV2/deployment";
+import { deployVault } from "../../helpers/deployments/vaults/deployment";
 
 async function main() {
   // Init
@@ -11,7 +12,7 @@ async function main() {
 
   // Deploy initial AMM vaults
   const vaultContractClass = 'VaultUniswapV2';
-  const vaultName = 'VaultUniswapV2'
+  const vaultName = 'VaultUniswapV2';
 
   await deployVault(
     vaultName,

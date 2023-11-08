@@ -2,7 +2,7 @@ import { time, loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
-import { deploymentArgs } from '../../helpers/deployments/vaults/VaultAMM/TraderJoe/deployment';
+import { deploymentArgs } from '../../helpers/deployments/vaults/VaultUniswapV2/deployment';
 import { zeroAddress, chains, vaultFees } from "../../helpers/constants";
 
 describe('VaultBase', () => {

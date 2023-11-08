@@ -2,7 +2,7 @@ import { time, loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 import { deploymentArgs as deploymentArgsController } from "../../helpers/deployments/controllers/ControllerXChain/deployment";
-import { deploymentArgs as deploymentArgsVault } from "../../helpers/deployments/vaults/VaultAMM/TraderJoe/deployment";
+import { deploymentArgs as deploymentArgsVault } from "../../helpers/deployments/vaults/VaultUniswapV2/deployment";
 import { chains } from "../../helpers/constants";
 import { BigNumber } from "ethers";
 import { 
