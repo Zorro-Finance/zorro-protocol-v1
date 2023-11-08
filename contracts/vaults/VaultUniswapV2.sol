@@ -39,8 +39,6 @@ contract VaultUniswapV2 is VaultBase, IVaultUniswapV2 {
         _setSwapPaths(_initVal.swapPaths.stablecoinToToken1);
         _setSwapPaths(_initVal.swapPaths.token0ToStablecoin);
         _setSwapPaths(_initVal.swapPaths.token1ToStablecoin);
-        _setSwapPaths(_initVal.swapPaths.rewardsToToken0);
-        _setSwapPaths(_initVal.swapPaths.rewardsToToken1);
 
         // Set price feeds
         _setPriceFeed(token0, _initVal.priceFeeds.token0);

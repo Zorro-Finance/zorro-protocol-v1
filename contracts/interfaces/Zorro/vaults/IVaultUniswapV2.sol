@@ -14,8 +14,6 @@ interface IVaultUniswapV2 is IVault {
         address[] stablecoinToToken1;
         address[] token0ToStablecoin;
         address[] token1ToStablecoin;
-        address[] rewardsToToken0;
-        address[] rewardsToToken1;
     }
 
     struct VaultUniswapV2PriceFeeds {

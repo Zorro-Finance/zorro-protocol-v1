@@ -8,25 +8,18 @@ const contractInits: ContractInitList<VaultAMMInit> = {
             asset: chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pool,
             token0: chains.avalanche!.tokens.wavax,
             token1: chains.avalanche!.tokens.usdc,
-            farmContract: chains.avalanche!.protocols.traderjoe.masterChef!,
-            rewardsToken: chains.avalanche!.tokens.joe,
-            isFarmable: false, // Changed to false to simplify operations at launch
-            pid: chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pid!,
             pool: chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pool,
             swapPaths: {
                 stablecoinToToken0: [chains.avalanche!.tokens.usdc, chains.avalanche!.tokens.wavax],
                 stablecoinToToken1: [],
                 token0ToStablecoin: [chains.avalanche!.tokens.wavax, chains.avalanche!.tokens.usdc],
                 token1ToStablecoin: [],
-                rewardsToToken0: [chains.avalanche!.tokens.joe, chains.avalanche!.tokens.wavax],
-                rewardsToToken1: [chains.avalanche!.tokens.joe, chains.avalanche!.tokens.usdc]
             },
             priceFeeds: {
                 token0: chains.avalanche!.priceFeeds.avax,
                 token1: chains.avalanche!.priceFeeds.usdc,
                 eth: chains.avalanche!.priceFeeds.avax,
                 stablecoin: chains.avalanche!.priceFeeds.usdc,
-                rewards: chains.avalanche!.priceFeeds.joe,
             },
             baseInit: {
                 treasury: chains.avalanche!.admin.multiSigOwner,
