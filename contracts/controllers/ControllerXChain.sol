@@ -28,8 +28,6 @@ import "../libraries/SafeSwap.sol";
 
 import "../libraries/SafeSwapETH.sol";
 
-import "hardhat/console.sol"; // TODO: Get rid of this
-
 
 /// @title ControllerXChain
 /// @notice Controls all cross chain operations
@@ -434,7 +432,6 @@ contract ControllerXChain is
         {   
             // Reimbursement logic (default to USD balance if no fees to reimburse)
             uint256 _remainingUSD = _balUSD;
-            console.log("remainingUSD: ", _remainingUSD);
 
             // Reimburse fee (if applicable)
             if (_req.feeToReimburse > 0) {
@@ -643,8 +640,6 @@ contract ControllerXChain is
                 address(this)
             );
 
-            console.log("msg.value, startGas, balUSD: ", msg.value, _startGas, _balUSD);
-
             // Make XC deposit request
             _sendDepositRequest(
                 XCRequest({
@@ -691,7 +686,12 @@ contract ControllerXChain is
         }
     }
 
-    // TODO docstring
+    /// @notice Verifies the EIP712 signature
+    /// @param _request An XCPermitRequest struct with the signed request instructions
+    /// @param _direction 0 for deposit, 1 for withdrawal
+    /// @param _deadline Deadline for transaction to succeed
+    /// @param _sigComponents a struct containing the v, r, s elliptical signature components
+    /// @return isValid true if valid, false if not
     function _verifySignature(
         XCPermitRequest calldata _request,
         uint8 _direction,
@@ -763,9 +763,6 @@ contract ControllerXChain is
         address[] memory _swapPath = new address[](2);
         _swapPath[0] = stablecoin;
         _swapPath[1] = WETH;
-
-        console.log("swapPath 0, 1: ", stablecoin, WETH);
-        console.log("Fee to be collected, relayer: ", _fee, _relayer);
 
         // Swap USD to ETH to the relayer
         SafeSwapUniETH.safeSwapToETH(

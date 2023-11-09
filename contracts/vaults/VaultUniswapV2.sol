@@ -6,8 +6,6 @@ import "./_VaultBase.sol";
 
 import "../libraries/LPUtility.sol";
 
-import "hardhat/console.sol"; // TODO: Get rid of this
-
 /// @title VaultUniswapV2
 /// @notice Vault contract for standard UniswapV2 based investment strategies
 contract VaultUniswapV2 is VaultBase {
@@ -16,6 +14,14 @@ contract VaultUniswapV2 is VaultBase {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeSwapUni for IUniswapV2Router02;
     using LPUtility for IUniswapV2Router02;
+
+    /* Structs */
+    struct PoolData {
+        address router;
+        address pool;
+        address token0;
+        address token1;
+    }
 
     /* Constructor */
 
@@ -35,7 +41,7 @@ contract VaultUniswapV2 is VaultBase {
     /* Functions */
 
     /// @inheritdoc	IVault
-    /// @param _data Encoding format: {pool}{token0}{token1}
+    /// @param _data Encoding format: {router}{pool}{token0}{token1}
     function depositUSD(
         uint256 _amountUSD,
         uint256 _maxSlippageFactor,
@@ -66,9 +72,9 @@ contract VaultUniswapV2 is VaultBase {
         bytes memory _data
     ) internal override nonReentrant {
         // Unpack data
-        (address _pool, address _token0, address _token1) = abi.decode(
+        (PoolData memory _poolData) = abi.decode(
             _data,
-            (address, address, address)
+            (PoolData)
         );
 
         // Safe transfer IN USD*
@@ -93,23 +99,23 @@ contract VaultUniswapV2 is VaultBase {
             );
 
             // Swap USD* into token0, token1 (if applicable)
-            if (_token0 != stablecoin) {
+            if (_poolData.token0 != stablecoin) {
                 IUniswapV2Router02(router).safeSwap(
                     _balUSD / 2,
-                    swapPaths[stablecoin][_token0],
+                    swapPaths[stablecoin][_poolData.token0],
                     priceFeeds[stablecoin],
-                    priceFeeds[_token0],
+                    priceFeeds[_poolData.token0],
                     _maxSlippageFactor,
                     address(this)
                 );
             }
 
-            if (_token1 != stablecoin) {
+            if (_poolData.token1 != stablecoin) {
                 IUniswapV2Router02(router).safeSwap(
                     _balUSD / 2,
-                    swapPaths[stablecoin][_token1],
+                    swapPaths[stablecoin][_poolData.token1],
                     priceFeeds[stablecoin],
-                    priceFeeds[_token1],
+                    priceFeeds[_poolData.token1],
                     _maxSlippageFactor,
                     address(this)
                 );
@@ -119,17 +125,17 @@ contract VaultUniswapV2 is VaultBase {
 
         {
             // Get token balances
-            uint256 _balToken0 = IERC20Upgradeable(_token0).balanceOf(
+            uint256 _balToken0 = IERC20Upgradeable(_poolData.token0).balanceOf(
                 address(this)
             );
-            uint256 _balToken1 = IERC20Upgradeable(_token1).balanceOf(
+            uint256 _balToken1 = IERC20Upgradeable(_poolData.token1).balanceOf(
                 address(this)
             );
 
             // Add liquidity
-            IUniswapV2Router02(router).joinPool(
-                _token0,
-                _token1,
+            IUniswapV2Router02(_poolData.router).joinPool(
+                _poolData.token0,
+                _poolData.token1,
                 _balToken0,
                 _balToken1,
                 _maxSlippageFactor,
@@ -138,11 +144,11 @@ contract VaultUniswapV2 is VaultBase {
         }
 
         // Emit log
-        emit DepositUSD(_pool, _amountUSD, _maxSlippageFactor);
+        emit DepositUSD(_poolData.pool, _amountUSD, _maxSlippageFactor);
     }
 
     /// @inheritdoc	IVault
-    /// @param _data Encoding format: {pool}{token0}{token1}
+    /// @param _data Encoding format: {router}{pool}{token0}{token1}
     function withdrawUSD(
         uint256 _lpShares,
         uint256 _maxSlippageFactor,
@@ -175,31 +181,24 @@ contract VaultUniswapV2 is VaultBase {
         bytes memory _data
     ) internal override nonReentrant {
         // Unpack data
-        (address _pool, address _token0, address _token1) = abi.decode(
+        (PoolData memory _poolData) = abi.decode(
             _data,
-            (address, address, address)
+            (PoolData)
         );
 
-        {
-            console.log("lp shares requested to withdrawUSD: ", _lpShares, _source, address(this));
-
-            uint256 _currAllowance = IERC20Upgradeable(_pool).allowance(_source, address(this));
-            console.log("current allowance: ", _currAllowance);
-        }
-
         // Safe Transfer LP tokens IN
-        IERC20Upgradeable(_pool).safeTransferFrom(
+        IERC20Upgradeable(_poolData.pool).safeTransferFrom(
             _source,
             address(this),
             _lpShares
         );
 
         // Remove liquidity
-        IUniswapV2Router02(router).exitPool(
+        IUniswapV2Router02(_poolData.router).exitPool(
             _lpShares,
-            _pool,
-            _token0,
-            _token1,
+            _poolData.pool,
+            _poolData.token0,
+            _poolData.token1,
             _maxSlippageFactor,
             address(this)
         );
@@ -207,29 +206,29 @@ contract VaultUniswapV2 is VaultBase {
         {
 
             // Calc balance of Tokens 0,1
-            uint256 _balToken0 = IERC20Upgradeable(_token0).balanceOf(
+            uint256 _balToken0 = IERC20Upgradeable(_poolData.token0).balanceOf(
                 address(this)
             );
-            uint256 _balToken1 = IERC20Upgradeable(_token1).balanceOf(
+            uint256 _balToken1 = IERC20Upgradeable(_poolData.token1).balanceOf(
                 address(this)
             );
 
             // Swap Tokens 0,1 to USD*
-            if (_token0 != stablecoin) {
+            if (_poolData.token0 != stablecoin) {
                 IUniswapV2Router02(router).safeSwap(
                     _balToken0,
-                    swapPaths[_token0][stablecoin],
-                    priceFeeds[_token0],
+                    swapPaths[_poolData.token0][stablecoin],
+                    priceFeeds[_poolData.token0],
                     priceFeeds[stablecoin],
                     _maxSlippageFactor,
                     address(this)
                 );
             }
-            if (_token1 != stablecoin) {
+            if (_poolData.token1 != stablecoin) {
                 IUniswapV2Router02(router).safeSwap(
                     _balToken1,
-                    swapPaths[_token1][stablecoin],
-                    priceFeeds[_token1],
+                    swapPaths[_poolData.token1][stablecoin],
+                    priceFeeds[_poolData.token1],
                     priceFeeds[stablecoin],
                     _maxSlippageFactor,
                     address(this)
@@ -260,7 +259,7 @@ contract VaultUniswapV2 is VaultBase {
         IERC20Upgradeable(stablecoin).safeTransfer(_recipient, _balUSD);
 
         // Emit log
-        emit WithdrawUSD(_pool, _balUSD, _maxSlippageFactor);
+        emit WithdrawUSD(_poolData.pool, _balUSD, _maxSlippageFactor);
     }
 
     /* Meta Transactions */

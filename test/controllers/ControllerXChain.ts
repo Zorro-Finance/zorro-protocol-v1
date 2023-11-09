@@ -88,13 +88,14 @@ describe('ControllerXChain', () => {
 
     function getVaultData() {
         const {pool} = chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC;
+        const router = chains.avalanche!.infra.uniRouterAddress;
         const token0 = chains.avalanche!.tokens.wavax;
         const token1 = chains.avalanche!.tokens.usdc;
 
         const abiCoder = ethers.utils.defaultAbiCoder;
         return abiCoder.encode(
-            ['address', 'address', 'address'],
-            [pool, token0, token1]
+            ['address', 'address', 'address', 'address'],
+            [router, pool, token0, token1]
         );
     }
 
@@ -688,8 +689,6 @@ describe('ControllerXChain', () => {
                 sig.r,
                 sig.s
             );
-
-            console.log('bal LP shares, after permit: ', balLPShares, wallet0.address, vault.address);
 
             // Get signature for deposit
             const xcPermitRequest = {
