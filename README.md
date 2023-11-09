@@ -31,8 +31,8 @@ _NOTE: Addresses coming soon, and will be updated below once contracts are deplo
 
 | Contract                   | Address (Proxy)                            |
 |----------------------------|--------------------------------------------|
-| ControllerXChain           | 0x144B0148b7613D73FE620c1614e7a6af785a9c61 |
-| TraderJoeAMMV1 (AVAX-USDC) | 0xd5d9DD5837Fc1ACEBEC207BB5D75858859eadfD0 |
+| ControllerXChain           | 0x1EAFAb82edFb51E0f477C0ADD8639D3a6716EA37 |
+| VaultUniswapV2             | 0xFaE44d3d9bcb2c8f35A23349b845971cCD8a951b |
 | Treasury                   | 0x0426B99e80783CB9b7C0741C9c9E1d0FAb3f80e7 |
 | Timelock                   | 0xb7f176e376B883816BA5C63077b6b2E5579538ae |
 
@@ -40,8 +40,8 @@ _NOTE: Addresses coming soon, and will be updated below once contracts are deplo
 
 | Contract                  | Address (Proxy)                            |
 |---------------------------|--------------------------------------------|
-| ControllerXChain          | 0xbaa62418679F1433D337414a3144f57908913567 |
-| SushiSwapAMM (MATIC-WETH) | 0x52a236d6a45984e81340fEa984890B2f83ab659F |
+| ControllerXChain          | 0x95DaB8f1db1ae09B4A983C369F98267Cc48C6F25 |
+| VaultUniswapV2            | 0x18cc15d53E4ff864222028F7Acde851F0b65B76b |
 | Treasury                  | 0x1cE192d20ccD646d8fF9a47D2C4A364bBD1bea1a |
 | Timelock                  | 0xa1Ea1421f9945CcB583eE7083AF6F76503415577 |
 

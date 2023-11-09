@@ -1,1 +1,5 @@
 contract_class,network,deployment_address,source,date
+ControllerXChain,avalanche,0x1EAFAb82edFb51E0f477C0ADD8639D3a6716EA37,deploy_001.ts,2023-11-09T23:05:29.527Z
+ControllerXChain,matic,0x95DaB8f1db1ae09B4A983C369F98267Cc48C6F25,deploy_001.ts,2023-11-09T23:11:17.073Z
+VaultUniswapV2,avalanche,0xFaE44d3d9bcb2c8f35A23349b845971cCD8a951b,deploy_002.ts,2023-11-09T23:14:10.582Z
+VaultUniswapV2,matic,0x18cc15d53E4ff864222028F7Acde851F0b65B76b,deploy_002.ts,2023-11-09T23:15:34.242Z
