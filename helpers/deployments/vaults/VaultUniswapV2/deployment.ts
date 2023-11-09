@@ -8,28 +8,24 @@ const contractInits: ContractInitList<VaultUniswapV2Init> = {
             eth: chains.matic!.priceFeeds.matic,
             stablecoin: chains.matic!.priceFeeds.usdc,
         },
-        baseInit: {
-            treasury: chains.matic!.admin.multiSigOwner,
-            router: chains.matic!.infra.uniRouterAddress,
-            stablecoin: chains.matic!.tokens.usdc,
-            tokenWETH: chains.matic!.tokens.wmatic,
-            entranceFeeFactor: vaultFees.entranceFeeFactor,
-            withdrawFeeFactor: vaultFees.withdrawFeeFactor,
-        },
+        treasury: chains.matic!.admin.multiSigOwner,
+        router: chains.matic!.infra.uniRouterAddress,
+        stablecoin: chains.matic!.tokens.usdc,
+        tokenWETH: chains.matic!.tokens.wmatic,
+        entranceFeeFactor: vaultFees.entranceFeeFactor,
+        withdrawFeeFactor: vaultFees.withdrawFeeFactor,
     },
     avalanche: {
         priceFeeds: {
             eth: chains.avalanche!.priceFeeds.avax,
             stablecoin: chains.avalanche!.priceFeeds.usdc,
         },
-        baseInit: {
-            treasury: chains.avalanche!.admin.multiSigOwner,
-            router: chains.avalanche!.infra.uniRouterAddress,
-            stablecoin: chains.avalanche!.tokens.usdc,
-            tokenWETH: chains.avalanche!.tokens.wavax,
-            entranceFeeFactor: vaultFees.entranceFeeFactor,
-            withdrawFeeFactor: vaultFees.withdrawFeeFactor,
-        },
+        treasury: chains.avalanche!.admin.multiSigOwner,
+        router: chains.avalanche!.infra.uniRouterAddress,
+        stablecoin: chains.avalanche!.tokens.usdc,
+        tokenWETH: chains.avalanche!.tokens.wavax,
+        entranceFeeFactor: vaultFees.entranceFeeFactor,
+        withdrawFeeFactor: vaultFees.withdrawFeeFactor,
     }
 };
 

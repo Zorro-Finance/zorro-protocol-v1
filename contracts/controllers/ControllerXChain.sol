@@ -28,6 +28,9 @@ import "../libraries/SafeSwap.sol";
 
 import "../libraries/SafeSwapETH.sol";
 
+import "hardhat/console.sol"; // TODO: Get rid of this
+
+
 /// @title ControllerXChain
 /// @notice Controls all cross chain operations
 contract ControllerXChain is
@@ -42,11 +45,11 @@ contract ControllerXChain is
     uint256 public constant BP_DENOMINATOR = 10000; // Basis point denominator
     bytes32 private constant _SEND_REQUEST_PERMIT_TYPEHASH =
         keccak256(
-            "SendRequestPermit(XCPermitRequest request,uint8 direction,uint256 xcfee,uint256 nonce,uint256 deadline)XCPermitRequest(uint16 dstChain,uint256 dstPoolId,address remoteControllerXChain,address vault,address originWallet,address dstWallet,uint256 amount,uint256 slippageFactor,uint256 dstGasForCall)"
+            "SendRequestPermit(XCPermitRequest request,uint8 direction,uint256 xcfee,uint256 nonce,uint256 deadline)XCPermitRequest(uint16 dstChain,uint256 dstPoolId,address remoteControllerXChain,address vault,address originWallet,address dstWallet,uint256 amount,uint256 slippageFactor,uint256 dstGasForCall,bytes data)"
         );
     bytes32 private constant _XC_PERMIT_REQUEST_TYPEHASH =
         keccak256(
-            "XCPermitRequest(uint16 dstChain,uint256 dstPoolId,address remoteControllerXChain,address vault,address originWallet,address dstWallet,uint256 amount,uint256 slippageFactor,uint256 dstGasForCall)"
+            "XCPermitRequest(uint16 dstChain,uint256 dstPoolId,address remoteControllerXChain,address vault,address originWallet,address dstWallet,uint256 amount,uint256 slippageFactor,uint256 dstGasForCall,bytes data)"
         );
 
     /* Libraries */
@@ -339,7 +342,7 @@ contract ControllerXChain is
         );
 
         // Deposit USD into vault
-        IVault(_vault).depositUSD(_valueUSD, _slippageFactor, _wallet, _data);
+        IVault(_vault).depositUSD(_valueUSD, _slippageFactor, address(this), _wallet, _data);
     }
 
     /* Withdrawals */
@@ -409,16 +412,18 @@ contract ControllerXChain is
                 feeToReimburse: 0, // No fee to reimburse
                 refundAddress: _msgSender(),
                 data: _data
-            })
+            }),
+            msg.sender
         );
     }
 
     /// @notice Internal function for sending withdrawal request
     /// @dev Allows for extra functionality for the permit flow
     /// @param _req A XCRequest struct to initiate the cross chain tx
-    function _sendWithdrawalRequest(XCRequest memory _req) internal {
+    /// @param _source The source of the tokens to withdraw from (e.g. LP tokens)
+    function _sendWithdrawalRequest(XCRequest memory _req, address _source) internal {
         // Perform withdraw USD operation
-        IVault(_req.vault).withdrawUSD(_req.amount, _req.slippageFactor, _req.data);
+        IVault(_req.vault).withdrawUSD(_req.amount, _req.slippageFactor, _source, address(this), _req.data);
 
         // Get USD balance
         uint256 _balUSD = IERC20Upgradeable(stablecoin).balanceOf(
@@ -426,9 +431,10 @@ contract ControllerXChain is
         );
         require(_balUSD > 0, "no USD withdrawn");
 
-        {
+        {   
             // Reimbursement logic (default to USD balance if no fees to reimburse)
             uint256 _remainingUSD = _balUSD;
+            console.log("remainingUSD: ", _remainingUSD);
 
             // Reimburse fee (if applicable)
             if (_req.feeToReimburse > 0) {
@@ -611,41 +617,15 @@ contract ControllerXChain is
     ) external payable nonReentrant {
         // Init
         uint256 _startGas = gasleft(); // To track gas reimbursement.
-        address _signer;
 
         // Check deadline
         require(block.timestamp <= _deadline, "ZorroXC: expired deadline");
 
-        {
-            // Calculate hash of typed data
-            bytes32 _structHash = keccak256(
-                abi.encode(
-                    _SEND_REQUEST_PERMIT_TYPEHASH,
-                    keccak256(
-                        abi.encode(_XC_PERMIT_REQUEST_TYPEHASH, _request)
-                    ),
-                    _direction,
-                    msg.value,
-                    _useNonce(_request.originWallet),
-                    _deadline
-                )
-            );
-            bytes32 _hash = _hashTypedDataV4(_structHash);
-
-            // Extract signer from signature
-            _signer = ECDSAUpgradeable.recover(
-                _hash,
-                _sigComponents.v,
-                _sigComponents.r,
-                _sigComponents.s
-            );
-
-            // Check if signer matches sender
-            require(
-                _signer == _request.originWallet,
-                "ZorroXC: invalid signature"
-            );
-        }
+        // Check if signer matches sender
+        require(
+            _verifySignature(_request, _direction, _deadline, _sigComponents),
+            "ZorroXC: invalid signature"
+        );
 
         // Allow transaction through
         if (_direction == 0) {
@@ -662,6 +642,8 @@ contract ControllerXChain is
             uint256 _balUSD = IERC20Upgradeable(stablecoin).balanceOf(
                 address(this)
             );
+
+            console.log("msg.value, startGas, balUSD: ", msg.value, _startGas, _balUSD);
 
             // Make XC deposit request
             _sendDepositRequest(
@@ -685,13 +667,6 @@ contract ControllerXChain is
         } else if (_direction == 1) {
             // Withdraw
 
-            // Safe transfer IN the vault tokens
-            IERC20Upgradeable(_request.vault).safeTransferFrom(
-                _request.originWallet,
-                address(this),
-                _request.amount
-            );
-
             // Make XC withdrawal request
             _sendWithdrawalRequest(
                 XCRequest({
@@ -708,11 +683,76 @@ contract ControllerXChain is
                     feeToReimburse: msg.value + _startGas * tx.gasprice,
                     refundAddress: _msgSender(),
                     data: _request.data
-                })
+                }),
+                _request.originWallet
             );
         } else {
             revert("ZorroXC: invalid dir");
         }
+    }
+
+    // TODO docstring
+    function _verifySignature(
+        XCPermitRequest calldata _request,
+        uint8 _direction,
+        uint256 _deadline,
+        SigComponents calldata _sigComponents
+    ) internal returns (bool isValid) {
+        // Encode bytes of all request parameters
+        // NOTE: Must be done in chunks to prevent "stack too deep" compiler errors
+        bytes memory encodedPermitRequest = abi.encode(
+            _XC_PERMIT_REQUEST_TYPEHASH, 
+            _request.dstChain,
+            _request.dstPoolId,
+            _request.remoteControllerXChain
+        );
+
+        {
+            encodedPermitRequest = bytes.concat(
+                encodedPermitRequest,
+                abi.encode(
+                    _request.vault,
+                    _request.originWallet,
+                    _request.dstWallet,
+                    _request.amount
+                )
+            );
+        }
+
+        {
+            encodedPermitRequest = bytes.concat(
+                encodedPermitRequest,
+                abi.encode(
+                    _request.slippageFactor,
+                    _request.dstGasForCall,
+                    keccak256(_request.data)
+                )
+            );
+        }
+
+        // Calculate hash of typed data
+        bytes32 _structHash = keccak256(
+            abi.encode(
+                _SEND_REQUEST_PERMIT_TYPEHASH,
+                keccak256(encodedPermitRequest),
+                _direction,
+                msg.value,
+                _useNonce(_request.originWallet),
+                _deadline
+            )
+        );
+        bytes32 _hash = _hashTypedDataV4(_structHash);
+
+        // Extract signer from signature
+        address _signer = ECDSAUpgradeable.recover(
+            _hash,
+            _sigComponents.v,
+            _sigComponents.r,
+            _sigComponents.s
+        );
+
+        // Check if signature is valid
+        isValid = _signer == _request.originWallet;
     }
 
     /// @notice Swaps USD to ETH to compensate relayer for XC fee spent
@@ -723,6 +763,9 @@ contract ControllerXChain is
         address[] memory _swapPath = new address[](2);
         _swapPath[0] = stablecoin;
         _swapPath[1] = WETH;
+
+        console.log("swapPath 0, 1: ", stablecoin, WETH);
+        console.log("Fee to be collected, relayer: ", _fee, _relayer);
 
         // Swap USD to ETH to the relayer
         SafeSwapUniETH.safeSwapToETH(

@@ -3,12 +3,10 @@ export interface VaultUniswapV2Init {
         eth: string;
         stablecoin: string;
     },
-    baseInit: {
-        treasury: string;
-        router: string;
-        stablecoin: string;
-        tokenWETH: string;
-        entranceFeeFactor: number;
-        withdrawFeeFactor: number;
-    },
+    treasury: string;
+    router: string;
+    stablecoin: string;
+    tokenWETH: string;
+    entranceFeeFactor: number;
+    withdrawFeeFactor: number;
 }

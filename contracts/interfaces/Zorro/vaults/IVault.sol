@@ -92,11 +92,13 @@ interface IVault {
     /// @notice Converts USD* to main asset and deposits it
     /// @param _amountUSD The amount of USD to deposit
     /// @param _maxSlippageFactor Max amount of slippage tolerated per UniswapV2 operation (9900 = 1%)
+    /// @param _source Where the USD should be transfered from (requires approval)
     /// @param _recipient Where the received tokens should be sent to
     /// @param _data Data that encodes the pool specific params (e.g. tokens, LP assets, etc.)
     function depositUSD(
         uint256 _amountUSD,
         uint256 _maxSlippageFactor,
+        address _source,
         address _recipient,
         bytes memory _data
     ) external;
@@ -104,17 +106,21 @@ interface IVault {
     /// @notice Withdraws main asset, converts to USD*, and sends back to sender
     /// @param _amount The number of units of the main asset to withdraw (e.g. LP tokens) (Units will vary so see child contract)
     /// @param _maxSlippageFactor Max amount of slippage tolerated per UniswapV2 operation (9900 = 1%)
+    /// @param _source Where the investment tokens (e.g. LP tokens, shares, etc.) should be transfered from (requires approval)
+    /// @param _recipient Where the withdrawn USD should be sent to
     /// @param _data Data that encodes the pool specific params (e.g. tokens, LP assets, etc.)
     function withdrawUSD(
         uint256 _amount, 
         uint256 _maxSlippageFactor,
+        address _source,
+        address _recipient,
         bytes memory _data
     ) external;
 
     /// @notice Performs gasless deposits/withdrawals from/to USD using a signature
     /// @dev WARNING This function reimburses the relayer based on the gas sent with the tx. Therefore, please only sign using trusted 
     /// dApps or their relayers could collect excess gas reimbursement.
-    /// @param _account Account that is signing this transaction
+    /// @param _account Account that is signing this transaction (source of and recipient of tokens)
     /// @param _amount The amount of USD (for deposits) or tokens (for withdrawals)
     /// @param _maxSlippageFactor Max amount of slippage tolerated per UniswapV2 operation (9900 = 1%)
     /// @param _direction 0 for deposit and 1 for withdrawal

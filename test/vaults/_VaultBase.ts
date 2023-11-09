@@ -27,7 +27,7 @@ describe('VaultBase', () => {
         return { vault, owner, otherAccount };
     }
 
-    describe('Depoloyment', () => {
+    describe('Deployment', () => {
         it('Should set the right initial values and owner', async () => {
             // Prep
             const { vault, owner } = await loadFixture(deployVaultBaseFixture);

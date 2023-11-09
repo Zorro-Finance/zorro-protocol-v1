@@ -26,6 +26,16 @@ describe('VaultUniswapV2Base', () => {
         
         await vault.deployed();
 
+        // Set swap paths
+        const token0 = chains.avalanche!.tokens.wavax;
+        const token1 = chains.avalanche!.tokens.usdc;
+        const usdc = chains.avalanche!.tokens.usdc;
+
+        await vault.setSwapPaths([token0, usdc]);
+        await vault.setSwapPaths([token1, usdc]);
+        await vault.setSwapPaths([usdc, token1]);
+        await vault.setSwapPaths([usdc, token0]);
+
         return { vault, owner, otherAccount };
     }
 
@@ -75,6 +85,18 @@ describe('VaultUniswapV2Base', () => {
         );
     }
 
+    function getVaultData() {
+        const {pool} = chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC;
+        const token0 = chains.avalanche!.tokens.wavax;
+        const token1 = chains.avalanche!.tokens.usdc;
+
+        const abiCoder = ethers.utils.defaultAbiCoder;
+        return abiCoder.encode(
+            ['address', 'address', 'address'],
+            [pool, token0, token1]
+        );
+    }
+
     describe('Depoloyment', () => {
         it('Should set the right initial values and owner', async () => {
             // Prep
@@ -101,17 +123,11 @@ describe('VaultUniswapV2Base', () => {
             const amountUSDC = balUSDC.div(10);
 
             // Prep data payload
-            const token0 = chains.avalanche!.tokens.wavax;
-            const token1 = chains.avalanche!.tokens.usdc;
-            const abiCoder = ethers.utils.defaultAbiCoder;
-            const data = abiCoder.encode(
-                ['address', 'address', 'address'],
-                [pool.address, token0, token1]
-            );
+            const data = getVaultData();
             
             // Run
             await usdc.approve(vault.address, amountUSDC);
-            await vault.depositUSD(amountUSDC, 9900, data);
+            await vault.depositUSD(amountUSDC, 9900, owner.address, owner.address, data);
 
             const balLPToken = await pool.balanceOf(owner.address);
             const balTreasuryUSDC = await usdc.balanceOf(chains.avalanche!.admin.multiSigOwner);
@@ -130,30 +146,28 @@ describe('VaultUniswapV2Base', () => {
             // Get LP Token
             await getAssets(ethers.utils.parseEther('10'));
             const pair = await ethers.getContractAt('IUniswapV2Pair', chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pool);
-            const token0 = chains.avalanche!.tokens.wavax;
-            const token1 = chains.avalanche!.tokens.usdc;
             const usdc = await ethers.getContractAt('IERC20Upgradeable', chains.avalanche!.tokens.usdc);
-            const balLP = await pair.balanceOf(owner.address);
-
+            const balUSDCInitial = await usdc.balanceOf(owner.address);
+            const balLPInitial = await pair.balanceOf(owner.address);
+            
             // Make deposit
-            await pair.approve(vault.address, balLP);
+            const data = getVaultData();
+            await usdc.approve(vault.address, balUSDCInitial);
+            await vault.depositUSD(balUSDCInitial, 9900, owner.address, owner.address, data);
+            const balLPNew = await pair.balanceOf(owner.address);
+            const balLPAdded = balLPNew.sub(balLPInitial);
 
             // Run
 
             // Make withdrawal
-            const abiCoder = ethers.utils.defaultAbiCoder;
-            const data = abiCoder.encode(
-                ['address', 'address', 'address'],
-                [pair.address, token0, token1]
-            )
-            await vault.withdrawUSD(balLP, 9900, data);
+            await pair.approve(vault.address, balLPAdded);
+            await vault.withdrawUSD(balLPAdded, 9900, owner.address, owner.address, data);
 
             // Test
 
-            // Withdraws all shares
-            expect(await pair.balanceOf(owner.address)).to.equal(0);
-            expect(await usdc.balanceOf(owner.address)).to.be.greaterThan(0);
-            // TODO: Need to show delta, not just that USDC > 0
+            // Withdraws all shares, net of fees
+            expect(await pair.balanceOf(owner.address)).to.be.approximately(balLPInitial, 1000);
+            expect(await usdc.balanceOf(owner.address)).to.be.approximately(balUSDCInitial.mul(98).div(100), 500000);
         });
 
         it('Withdraws to USD (partial withdrawal)', async () => {
@@ -163,29 +177,27 @@ describe('VaultUniswapV2Base', () => {
             // Get LP Token
             await getAssets(ethers.utils.parseEther('10'));
             const pair = await ethers.getContractAt('IUniswapV2Pair', chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pool);
-            const token0 = chains.avalanche!.tokens.wavax;
-            const token1 = chains.avalanche!.tokens.usdc;
             const usdc = await ethers.getContractAt('IERC20Upgradeable', chains.avalanche!.tokens.usdc);
-            const balLP = await pair.balanceOf(owner.address);
+            const balUSDCInitial = await usdc.balanceOf(owner.address);
+            const balLPInitial = await pair.balanceOf(owner.address);
 
             // Make deposit
-            await pair.approve(vault.address, balLP.div(10));
+            const data = getVaultData();
+            await usdc.approve(vault.address, balUSDCInitial);
+            await vault.depositUSD(balUSDCInitial, 9900, owner.address, owner.address, data);
+            const balLPNew = await pair.balanceOf(owner.address);
+            const balLPAdded = balLPNew.sub(balLPInitial);
 
             // Run
 
             // Make withdrawal
-            const abiCoder = ethers.utils.defaultAbiCoder;
-            const data = abiCoder.encode(
-                ['address', 'address', 'address'],
-                [pair.address, token0, token1]
-            );
-            await vault.withdrawUSD(balLP.div(10), 9900, data);
+            await pair.approve(vault.address, balLPAdded);
+            await vault.withdrawUSD(balLPAdded.div(10), 9900, owner.address, owner.address, data);
 
             // Test
 
-            // Withdraws all shares
-            // TODO: For both: Need to show delta, not just that USDC > 0
-            expect(await pair.balanceOf(owner.address)).to.equal(0);
+            // Withdraws some tokens
+            expect(await pair.balanceOf(owner.address)).to.be.greaterThan(balLPInitial);
             expect(await usdc.balanceOf(owner.address)).to.be.greaterThan(0);
         });
     });
@@ -194,13 +206,16 @@ describe('VaultUniswapV2Base', () => {
         it('Deposits USD as a meta transaction', async () => {
             // Prep
             const { vault, owner } = await loadFixture(deployVaultBaseFixture);
-            const pair = await ethers.getContractAt('IUniswapV2Pair', chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pool);
-            const token0 = chains.avalanche!.tokens.wavax;
-            const token1 = chains.avalanche!.tokens.usdc;
 
             // Get LP Token
             await getAssets(ethers.utils.parseEther('10'));
-            const usdc = await ethers.getContractAt('ERC20PermitUpgradeable', chains.avalanche!.tokens.usdc);
+            const usdcPermit = await ethers.getContractAt('IERC20PermitUpgradeable', chains.avalanche!.tokens.usdc);
+            const usdcERC20 = await ethers.getContractAt('ERC20Upgradeable', chains.avalanche!.tokens.usdc);
+            const abiUSDC = [
+                ...usdcPermit.interface.format(),
+                ...usdcERC20.interface.format(),
+            ];
+            const usdc = await ethers.getContractAt(abiUSDC, chains.avalanche!.tokens.usdc);
             const balUSDC = await usdc.balanceOf(owner.address);
             const amountUSDC = balUSDC.div(10);
             const maxMarketMovement = 9900;
@@ -235,14 +250,11 @@ describe('VaultUniswapV2Base', () => {
             );
 
             // Get signature for deposit
-            const abiCoder = ethers.utils.defaultAbiCoder;
-            const data = abiCoder.encode(
-                ['address', 'address', 'address'],
-                [pair.address, token0, token1]
-            );
+            const data = getVaultData();
             const metaTxRes = await getTransactPermitSignature(
                 wallet0,
                 vault,
+                'ZVault UniswapV2',
                 amountUSDC,
                 maxMarketMovement,
                 'deposit',
@@ -256,9 +268,11 @@ describe('VaultUniswapV2Base', () => {
                 0, // Deposit
                 metaTxRes.deadline,
                 data,
-                metaTxRes.sig.v,
-                metaTxRes.sig.r,
-                metaTxRes.sig.s,
+                {
+                    v: metaTxRes.sig.v,
+                    r: metaTxRes.sig.r,
+                    s: metaTxRes.sig.s,
+                }
             );
 
             // Test
@@ -272,13 +286,11 @@ describe('VaultUniswapV2Base', () => {
             const { vault, owner } = await loadFixture(deployVaultBaseFixture);
             const maxMarketMovement = 9900; // Slippage: 1%
             const pair = await ethers.getContractAt('IUniswapV2Pair', chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pool);
-            const token0 = chains.avalanche!.tokens.wavax;
-            const token1 = chains.avalanche!.tokens.usdc;
-
+            const usdc = await ethers.getContractAt('IERC20Upgradeable', chains.avalanche!.tokens.usdc);
+            
             // Get LP Token
             await getAssets(ethers.utils.parseEther('10'));
-            const balLP = await pair.balanceOf(owner.address);
-            const amountLP = balLP.div(10);
+            const balUSDCInitial = await usdc.balanceOf(owner.address);
 
             // Get wallet
             const signerProvider = owner.provider!;
@@ -286,12 +298,12 @@ describe('VaultUniswapV2Base', () => {
             const wallet0 = new ethers.Wallet(wallet0PK, signerProvider);
 
             // Make deposit
-            await pair.approve(vault.address, amountLP);
-            await vault.deposit(amountLP);
-
-            // Transfer shars to wallet for signature
-            const balShares = await vault.balanceOf(owner.address);
-            await vault.transfer(wallet0.address, balShares);
+            const data = getVaultData();
+            await owner.sendTransaction({to: wallet0.address, value: ethers.utils.parseEther('1')});
+            await usdc.transfer(wallet0.address, balUSDCInitial);
+            await usdc.connect(wallet0).approve(vault.address, balUSDCInitial);
+            await vault.depositUSD(balUSDCInitial, 9900, wallet0.address, wallet0.address, data);
+            const balLPShares = await pair.balanceOf(wallet0.address);
 
             // Run
 
@@ -299,32 +311,28 @@ describe('VaultUniswapV2Base', () => {
             const { sig, deadline } = await getPermitSignature(
                 wallet0,
                 vault.address,
-                vault,
-                balShares,
+                pair,
+                balLPShares,
                 '1'
             );
             // Get permit for allowance
-            await vault.permit(
+            await pair.permit(
                 wallet0.address,
                 vault.address,
-                balShares,
+                balLPShares,
                 deadline,
                 sig.v,
                 sig.r,
-                sig.s
+                sig.s,
             );
 
             // Permit withdrawal transaction (gasless)
             // Get signature for deposit
-            const abiCoder = ethers.utils.defaultAbiCoder;
-            const data = abiCoder.encode(
-                ['address', 'address', 'address'],
-                [pair.address, token0, token1]
-            );
             const metaTxRes = await getTransactPermitSignature(
                 wallet0,
                 vault,
-                balShares,
+                'ZVault UniswapV2',
+                balLPShares,
                 maxMarketMovement,
                 'withdraw',
                 data
@@ -332,14 +340,16 @@ describe('VaultUniswapV2Base', () => {
             // Make withdrawal meta transaction
             const tx = await vault.transactUSDWithPermit(
                 wallet0.address,
-                balShares,
+                balLPShares,
                 maxMarketMovement,
                 1, // Withdrawal
                 metaTxRes.deadline,
                 data,
-                metaTxRes.sig.v,
-                metaTxRes.sig.r,
-                metaTxRes.sig.s,
+                {
+                    v: metaTxRes.sig.v,
+                    r: metaTxRes.sig.r,
+                    s: metaTxRes.sig.s,
+                }
             );
 
             // Test
