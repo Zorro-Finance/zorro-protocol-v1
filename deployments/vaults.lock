@@ -1,3 +1,3 @@
 vault_contract_class,network,protocol,pool,deployment_address,source,date
-VaultUniswapV2,VaultUniswapV2,avalanche,UniswapV2,0xFaE44d3d9bcb2c8f35A23349b845971cCD8a951b,deploy_002.ts,2023-11-09T23:14:10.578Z
-VaultUniswapV2,VaultUniswapV2,matic,UniswapV2,0x18cc15d53E4ff864222028F7Acde851F0b65B76b,deploy_002.ts,2023-11-09T23:15:34.238Z
+VaultUniswapV2,VaultUniswapV2,avalanche,UniswapV2,0x40e9AC0E300e5ae43E5Dbf0dE16feCB3573C643e,deploy_002.ts,2023-11-12T00:16:05.413Z
+VaultUniswapV2,VaultUniswapV2,matic,UniswapV2,0x4d9C02C845389B809B6aBcC2359930AF1B7D32B7,deploy_002.ts,2023-11-12T00:17:40.015Z

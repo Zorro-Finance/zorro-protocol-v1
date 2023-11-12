@@ -2,20 +2,25 @@
   "manifestVersion": "3.2",
   "proxies": [
     {
-      "address": "0x95DaB8f1db1ae09B4A983C369F98267Cc48C6F25",
-      "txHash": "0xaf18576857280664c8023cefbdefc9fd4de3e4166daad3e4e25b523fca1e7f2f",
+      "address": "0x4476171d7A876BBb86c43B9479f917200d3527Dd",
+      "txHash": "0xa5f25eb784e32f9e2eba557bf597650e8df1a2107131dbdd1d6d57c982011c53",
       "kind": "uups"
     },
     {
-      "address": "0x18cc15d53E4ff864222028F7Acde851F0b65B76b",
-      "txHash": "0xce8ea1e4c8c75e025e934960a8c23eb2db2ae03cab96429c4df9d4a338bbb427",
+      "address": "0xa96500f009F7800a13d01111c216370FAFA44a96",
+      "txHash": "0x8385e42de10f51d5682a7f6a5fb06c7104e6d2f0b3804460d738c62df401190c",
+      "kind": "uups"
+    },
+    {
+      "address": "0x4d9C02C845389B809B6aBcC2359930AF1B7D32B7",
+      "txHash": "0x6e67f734710475e908f3b5eace07cb5cb9e82a8c334ef5fe66e00055581c641f",
       "kind": "uups"
     }
   ],
   "impls": {
     "94071fb1e6176f26bf3fe8a92027a5d801ec2aff4f0d7e9317e9bbcd4092e1be": {
-      "address": "0xFE6bA02a5566784bA7760A52C4C1B116494E8EAB",
-      "txHash": "0x360e4e94c2970b061741113fbb617e7007224217be4788bcd36fb9f050dbeef7",
+      "address": "0xA65f437Eb3C471A73300876EB98675fD1D491355",
+      "txHash": "0x45b79ce40ec650b29972bd232c6b6cccdaa57295bc3da15c1aae7c317e617839",
       "layout": {
         "solcVersion": "0.8.18",
         "storage": [
@@ -261,9 +266,9 @@
         }
       }
     },
-    "499d40c2264dfb15b185ce8cc0f25dab3d4177774db2500e15c0c6cf3faa0938": {
-      "address": "0x4d5a3FD0940194d7CBDE8fE02099845Fd7FCc889",
-      "txHash": "0xd3637a7f9851c1159da3ac17c605d759ae1df1bce85695feadc2d11e3b7c54b7",
+    "4693e37cb6332152c9a629967e1eea67564ebf5f8125fea50532744972340dc8": {
+      "address": "0x1EAFAb82edFb51E0f477C0ADD8639D3a6716EA37",
+      "txHash": "0xc60f2306aaf73fe84d13bc3e1fb7ae2fe367963305b7dd9cb486f37161caf014",
       "layout": {
         "solcVersion": "0.8.18",
         "storage": [
@@ -445,46 +450,26 @@
             "src": "contracts/vaults/_VaultBase.sol:100"
           },
           {
-            "label": "swapPaths",
+            "label": "priceFeeds",
             "offset": 0,
             "slot": "361",
-            "type": "t_mapping(t_address,t_mapping(t_address,t_array(t_address)dyn_storage))",
+            "type": "t_mapping(t_address,t_contract(AggregatorV3Interface)45)",
             "contract": "VaultBase",
             "src": "contracts/vaults/_VaultBase.sol:103"
           },
           {
-            "label": "swapPathLength",
-            "offset": 0,
-            "slot": "362",
-            "type": "t_mapping(t_address,t_mapping(t_address,t_uint16))",
-            "contract": "VaultBase",
-            "src": "contracts/vaults/_VaultBase.sol:104"
-          },
-          {
-            "label": "priceFeeds",
-            "offset": 0,
-            "slot": "363",
-            "type": "t_mapping(t_address,t_contract(AggregatorV3Interface)45)",
-            "contract": "VaultBase",
-            "src": "contracts/vaults/_VaultBase.sol:105"
-          },
-          {
             "label": "_nonces",
             "offset": 0,
-            "slot": "364",
+            "slot": "362",
             "type": "t_mapping(t_address,t_struct(Counter)2435_storage)",
             "contract": "VaultBase",
-            "src": "contracts/vaults/_VaultBase.sol:108"
+            "src": "contracts/vaults/_VaultBase.sol:106"
           }
         ],
         "types": {
           "t_address": {
             "label": "address",
             "numberOfBytes": "20"
-          },
-          "t_array(t_address)dyn_storage": {
-            "label": "address[]",
-            "numberOfBytes": "32"
           },
           "t_array(t_uint256)49_storage": {
             "label": "uint256[49]",
@@ -506,28 +491,12 @@
             "label": "contract AggregatorV3Interface",
             "numberOfBytes": "20"
           },
-          "t_mapping(t_address,t_array(t_address)dyn_storage)": {
-            "label": "mapping(address => address[])",
-            "numberOfBytes": "32"
-          },
           "t_mapping(t_address,t_contract(AggregatorV3Interface)45)": {
             "label": "mapping(address => contract AggregatorV3Interface)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_address,t_mapping(t_address,t_array(t_address)dyn_storage))": {
-            "label": "mapping(address => mapping(address => address[]))",
-            "numberOfBytes": "32"
-          },
-          "t_mapping(t_address,t_mapping(t_address,t_uint16))": {
-            "label": "mapping(address => mapping(address => uint16))",
-            "numberOfBytes": "32"
-          },
           "t_mapping(t_address,t_struct(Counter)2435_storage)": {
             "label": "mapping(address => struct CountersUpgradeable.Counter)",
-            "numberOfBytes": "32"
-          },
-          "t_mapping(t_address,t_uint16)": {
-            "label": "mapping(address => uint16)",
             "numberOfBytes": "32"
           },
           "t_struct(Counter)2435_storage": {
@@ -541,10 +510,6 @@
               }
             ],
             "numberOfBytes": "32"
-          },
-          "t_uint16": {
-            "label": "uint16",
-            "numberOfBytes": "2"
           },
           "t_uint256": {
             "label": "uint256",

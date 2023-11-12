@@ -2,20 +2,20 @@
   "manifestVersion": "3.2",
   "proxies": [
     {
-      "address": "0x1EAFAb82edFb51E0f477C0ADD8639D3a6716EA37",
-      "txHash": "0x21640556264dc314e4c107e8088189e13905e25a4aec4957edce55de2cec17d0",
+      "address": "0xD0319f96D1715199Da888DF1088C2fb2861A8Ba6",
+      "txHash": "0x837b89ead86336c43948186f8488a0da7432be0da9d4f7fbeefaaf6c2b211bb1",
       "kind": "uups"
     },
     {
-      "address": "0xFaE44d3d9bcb2c8f35A23349b845971cCD8a951b",
-      "txHash": "0xd2061ee73973cc3539cafc38a2f7bc7f0319d986a3b7780118404a957e205e38",
+      "address": "0x40e9AC0E300e5ae43E5Dbf0dE16feCB3573C643e",
+      "txHash": "0xd53ff2531cdbab6c9c5c873009a4d027a20883df068b12b554f891f91b2ac049",
       "kind": "uups"
     }
   ],
   "impls": {
     "94071fb1e6176f26bf3fe8a92027a5d801ec2aff4f0d7e9317e9bbcd4092e1be": {
-      "address": "0xa96500f009F7800a13d01111c216370FAFA44a96",
-      "txHash": "0x85ecc3858cf87fcb08b065276d913f50d652f699f57564367399bec31b641aa0",
+      "address": "0x6B270ac1CEF49c2f5b32ee61066965EcED4Cb103",
+      "txHash": "0x03fe693d8612169f9ac67c17ead44757b3fa6e73f785d73f82eda97c8f5d0718",
       "layout": {
         "solcVersion": "0.8.18",
         "storage": [
@@ -261,9 +261,9 @@
         }
       }
     },
-    "499d40c2264dfb15b185ce8cc0f25dab3d4177774db2500e15c0c6cf3faa0938": {
-      "address": "0x4d9C02C845389B809B6aBcC2359930AF1B7D32B7",
-      "txHash": "0xd2e82cfeae977c35a0d3999148034e885353b396b2f40fd18188d44a61b5e432",
+    "4693e37cb6332152c9a629967e1eea67564ebf5f8125fea50532744972340dc8": {
+      "address": "0x539ac0FebaD2E40E41479032c9e37e029052f443",
+      "txHash": "0xf16f6999124572a4a3f39cb2e5f0c3da6df7a9ec08b4e58bc4d9ab86b885556c",
       "layout": {
         "solcVersion": "0.8.18",
         "storage": [
@@ -445,46 +445,26 @@
             "src": "contracts/vaults/_VaultBase.sol:100"
           },
           {
-            "label": "swapPaths",
+            "label": "priceFeeds",
             "offset": 0,
             "slot": "361",
-            "type": "t_mapping(t_address,t_mapping(t_address,t_array(t_address)dyn_storage))",
+            "type": "t_mapping(t_address,t_contract(AggregatorV3Interface)45)",
             "contract": "VaultBase",
             "src": "contracts/vaults/_VaultBase.sol:103"
           },
           {
-            "label": "swapPathLength",
-            "offset": 0,
-            "slot": "362",
-            "type": "t_mapping(t_address,t_mapping(t_address,t_uint16))",
-            "contract": "VaultBase",
-            "src": "contracts/vaults/_VaultBase.sol:104"
-          },
-          {
-            "label": "priceFeeds",
-            "offset": 0,
-            "slot": "363",
-            "type": "t_mapping(t_address,t_contract(AggregatorV3Interface)45)",
-            "contract": "VaultBase",
-            "src": "contracts/vaults/_VaultBase.sol:105"
-          },
-          {
             "label": "_nonces",
             "offset": 0,
-            "slot": "364",
+            "slot": "362",
             "type": "t_mapping(t_address,t_struct(Counter)2435_storage)",
             "contract": "VaultBase",
-            "src": "contracts/vaults/_VaultBase.sol:108"
+            "src": "contracts/vaults/_VaultBase.sol:106"
           }
         ],
         "types": {
           "t_address": {
             "label": "address",
             "numberOfBytes": "20"
-          },
-          "t_array(t_address)dyn_storage": {
-            "label": "address[]",
-            "numberOfBytes": "32"
           },
           "t_array(t_uint256)49_storage": {
             "label": "uint256[49]",
@@ -506,28 +486,12 @@
             "label": "contract AggregatorV3Interface",
             "numberOfBytes": "20"
           },
-          "t_mapping(t_address,t_array(t_address)dyn_storage)": {
-            "label": "mapping(address => address[])",
-            "numberOfBytes": "32"
-          },
           "t_mapping(t_address,t_contract(AggregatorV3Interface)45)": {
             "label": "mapping(address => contract AggregatorV3Interface)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_address,t_mapping(t_address,t_array(t_address)dyn_storage))": {
-            "label": "mapping(address => mapping(address => address[]))",
-            "numberOfBytes": "32"
-          },
-          "t_mapping(t_address,t_mapping(t_address,t_uint16))": {
-            "label": "mapping(address => mapping(address => uint16))",
-            "numberOfBytes": "32"
-          },
           "t_mapping(t_address,t_struct(Counter)2435_storage)": {
             "label": "mapping(address => struct CountersUpgradeable.Counter)",
-            "numberOfBytes": "32"
-          },
-          "t_mapping(t_address,t_uint16)": {
-            "label": "mapping(address => uint16)",
             "numberOfBytes": "32"
           },
           "t_struct(Counter)2435_storage": {
@@ -541,10 +505,6 @@
               }
             ],
             "numberOfBytes": "32"
-          },
-          "t_uint16": {
-            "label": "uint16",
-            "numberOfBytes": "2"
           },
           "t_uint256": {
             "label": "uint256",
