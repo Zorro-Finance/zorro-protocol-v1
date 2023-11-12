@@ -52,11 +52,6 @@ describe('ControllerXChain', () => {
         const token1 = chains.avalanche!.tokens.usdc;
         const usdc = chains.avalanche!.tokens.usdc;
 
-        await vault.setSwapPaths([token0, usdc]);
-        await vault.setSwapPaths([token1, usdc]);
-        await vault.setSwapPaths([usdc, token1]);
-        await vault.setSwapPaths([usdc, token0]);
-
 
         return { vault, owner, otherAccount };
     }
@@ -91,11 +86,14 @@ describe('ControllerXChain', () => {
         const router = chains.avalanche!.infra.uniRouterAddress;
         const token0 = chains.avalanche!.tokens.wavax;
         const token1 = chains.avalanche!.tokens.usdc;
+        const usdc = chains.avalanche!.tokens.usdc;
 
         const abiCoder = ethers.utils.defaultAbiCoder;
         return abiCoder.encode(
-            ['address', 'address', 'address', 'address'],
-            [router, pool, token0, token1]
+            ['tuple(address,address,address,address,address[],address[])'],
+            [
+                [router, pool, token0, token1, [token0, usdc], [token1, usdc]],
+            ]
         );
     }
 

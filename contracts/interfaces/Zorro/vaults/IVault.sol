@@ -139,26 +139,6 @@ interface IVault {
 
     // Token operations
 
-    /// @notice Shows swap paths for a given start and end token
-    /// @param _startToken The origin token to swap from
-    /// @param _endToken The destination token to swap to
-    /// @param _index The index of the swap path to retrieve the token for
-    /// @return The token address
-    function swapPaths(
-        address _startToken,
-        address _endToken,
-        uint256 _index
-    ) external view returns (address);
-
-    /// @notice Shows the length of the swap path for a given start and end token
-    /// @param _startToken The origin token to swap from
-    /// @param _endToken The destination token to swap to
-    /// @return The length of the swap paths
-    function swapPathLength(
-        address _startToken,
-        address _endToken
-    ) external view returns (uint16);
-
     /// @notice Returns a Chainlink-compatible price feed for a provided token address, if it exists
     /// @param _token The token to return a price feed for
     /// @return An AggregatorV3 price feed

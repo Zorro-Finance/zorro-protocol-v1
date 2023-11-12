@@ -21,6 +21,8 @@ contract VaultUniswapV2 is VaultBase {
         address pool;
         address token0;
         address token1;
+        address[] swapPathToken0ToStablecoin;
+        address[] swapPathToken1ToStablecoin;
     }
 
     /* Constructor */
@@ -41,7 +43,7 @@ contract VaultUniswapV2 is VaultBase {
     /* Functions */
 
     /// @inheritdoc	IVault
-    /// @param _data Encoding format: {router}{pool}{token0}{token1}
+    /// @param _data Encoding format: {router}{pool}{token0}{token1}{swapPathT0ToStablecoin}{swapPathT1ToStablecoin}
     function depositUSD(
         uint256 _amountUSD,
         uint256 _maxSlippageFactor,
@@ -102,7 +104,7 @@ contract VaultUniswapV2 is VaultBase {
             if (_poolData.token0 != stablecoin) {
                 IUniswapV2Router02(router).safeSwap(
                     _balUSD / 2,
-                    swapPaths[stablecoin][_poolData.token0],
+                    _reverseSwapPath(_poolData.swapPathToken0ToStablecoin),
                     priceFeeds[stablecoin],
                     priceFeeds[_poolData.token0],
                     _maxSlippageFactor,
@@ -113,7 +115,7 @@ contract VaultUniswapV2 is VaultBase {
             if (_poolData.token1 != stablecoin) {
                 IUniswapV2Router02(router).safeSwap(
                     _balUSD / 2,
-                    swapPaths[stablecoin][_poolData.token1],
+                    _reverseSwapPath(_poolData.swapPathToken1ToStablecoin),
                     priceFeeds[stablecoin],
                     priceFeeds[_poolData.token1],
                     _maxSlippageFactor,
@@ -148,7 +150,7 @@ contract VaultUniswapV2 is VaultBase {
     }
 
     /// @inheritdoc	IVault
-    /// @param _data Encoding format: {router}{pool}{token0}{token1}
+    /// @param _data Encoding format: {router}{pool}{token0}{token1}{swapPathT0ToStablecoin}{swapPathT1ToStablecoin}
     function withdrawUSD(
         uint256 _lpShares,
         uint256 _maxSlippageFactor,
@@ -217,7 +219,7 @@ contract VaultUniswapV2 is VaultBase {
             if (_poolData.token0 != stablecoin) {
                 IUniswapV2Router02(router).safeSwap(
                     _balToken0,
-                    swapPaths[_poolData.token0][stablecoin],
+                    _poolData.swapPathToken0ToStablecoin,
                     priceFeeds[_poolData.token0],
                     priceFeeds[stablecoin],
                     _maxSlippageFactor,
@@ -227,7 +229,7 @@ contract VaultUniswapV2 is VaultBase {
             if (_poolData.token1 != stablecoin) {
                 IUniswapV2Router02(router).safeSwap(
                     _balToken1,
-                    swapPaths[_poolData.token1][stablecoin],
+                    _poolData.swapPathToken1ToStablecoin,
                     priceFeeds[_poolData.token1],
                     priceFeeds[stablecoin],
                     _maxSlippageFactor,

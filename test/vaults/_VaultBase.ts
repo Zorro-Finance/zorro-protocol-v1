@@ -89,23 +89,6 @@ describe('VaultBase', () => {
             expect(await vault.defaultSlippageFactor()).to.equal(newSlippage);
         });
 
-        it('Should set swap paths', async () => {
-            // Prep
-            const { vault, owner } = await loadFixture(deployVaultBaseFixture);
-            const newSwapPath = [];
-            for (let i = 0; i < 2; i++) {
-                newSwapPath.push(ethers.Wallet.createRandom().address);
-
-            }
-
-            // Run
-            await vault.setSwapPaths(newSwapPath);
-
-            // Test
-            expect(await vault.swapPaths(newSwapPath[0], newSwapPath[1], 0)).to.equal(newSwapPath[0]);
-            expect(await vault.swapPaths(newSwapPath[0], newSwapPath[1], 1)).to.equal(newSwapPath[1]);
-        });
-
         it('Should set a price feed for a token', async () => {
             // Prep
             const { vault, owner } = await loadFixture(deployVaultBaseFixture);

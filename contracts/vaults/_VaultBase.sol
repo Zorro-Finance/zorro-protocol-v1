@@ -100,8 +100,6 @@ abstract contract VaultBase is
     address public gov;
 
     // Token operations
-    mapping(address => mapping(address => address[])) public swapPaths; // Swap paths. Mapping: start address => end address => address array describing swap path
-    mapping(address => mapping(address => uint16)) public swapPathLength; // Swap path lengths. Mapping: start address => end address => path length
     mapping(address => AggregatorV3Interface) public priceFeeds; // Price feeds. Mapping: token address => price feed address (AggregatorV3Interface implementation)
 
     // Gasless
@@ -139,30 +137,6 @@ abstract contract VaultBase is
         uint256 _slippageFactor
     ) external onlyOwner {
         defaultSlippageFactor = _slippageFactor;
-    }
-
-    /// @notice Sets swap paths for UniswapV2 swaps
-    /// @param _path The array of tokens representing the swap path
-    function setSwapPaths(address[] memory _path) external onlyOwner {
-        _setSwapPaths(_path);
-    }
-
-    /// @notice Internal function for setting swap paths
-    /// @param _path The array of tokens representing the swap path
-    function _setSwapPaths(address[] memory _path) internal {
-        // Check to make sure path not empty
-        if (_path.length == 0) {
-            return;
-        }
-
-        // Prep
-        address _startToken = _path[0];
-        address _endToken = _path[_path.length - 1];
-        // Set path mapping
-        swapPaths[_startToken][_endToken] = _path;
-
-        // Set length
-        swapPathLength[_startToken][_endToken] = uint16(_path.length);
     }
 
     /// @notice Sets price feed for a given token
@@ -368,4 +342,20 @@ abstract contract VaultBase is
     /// @notice Internal function for initializing the EIP712 constructor
     /// @dev Domain hash veries by contract so this is marked as abstract
     function _initEIP712() internal virtual;
+
+    /* Utilities */
+
+    /// @notice Internal utility for reversing the swap path (e.g. token0 -> stablecoin to stablecoin -> token0)
+    /// @param _path The array of addresses representing the swap path
+    /// @return newPath The swap path in the opposite direction
+    function _reverseSwapPath(address[] memory _path) internal pure returns (address[] memory newPath) {
+        uint256 _pathLength = _path.length;
+        address[] memory _newPath = new address[](_pathLength);
+
+        for (uint8 i = 0; i < _pathLength; i++) {
+            _newPath[i] = _path[_pathLength - 1 - i];
+        }
+
+        return _newPath;
+    }
 }
