@@ -107,9 +107,23 @@ contract ControllerXChain is
     uint256 public defaultSlippageFactor;
 
     // Meta Tx
+    address public relayer;
     mapping(address => CountersUpgradeable.Counter) private _nonces;
 
+    /* Modifiers */
+
+    modifier onlyAllowRelayer() {
+        require(_msgSender() == relayer, "!relayer");
+        _;
+    }
+
     /* Setters */
+
+    /// @notice Sets the only permitted address that can relay permit transactions (e.g. requestWithPermit)
+    /// @param _relayer The address of the relayer
+    function setRelayer(address _relayer) external onlyOwner {
+        relayer = _relayer;
+    }
 
     /// @notice Sets key cross chain contract addresses
     /// @param _lzEndpoint LayerZero endpoint address
@@ -611,7 +625,7 @@ contract ControllerXChain is
         uint8 _direction,
         uint256 _deadline,
         SigComponents calldata _sigComponents
-    ) external payable nonReentrant {
+    ) external payable nonReentrant onlyAllowRelayer {
         // Init
         uint256 _startGas = gasleft(); // To track gas reimbursement.
 

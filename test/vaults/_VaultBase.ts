@@ -1,8 +1,10 @@
-import { time, loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 import { deploymentArgs } from '../../helpers/deployments/vaults/VaultUniswapV2/deployment';
 import { chains, vaultFees } from "../../helpers/constants";
+import { getTransactPermitSignature } from "../../helpers/tests/metatx";
+import { BigNumber } from "ethers";
 
 describe('VaultBase', () => {
     async function deployVaultBaseFixture() {
@@ -24,10 +26,24 @@ describe('VaultBase', () => {
         
         await vault.deployed();
 
+        // Preset params
+        await vault.setRelayer(owner.address);
+
         return { vault, owner, otherAccount };
     }
 
     describe('Deployment', () => {
+        it('Should set relayer', async () => {
+            // Prep
+            const { vault, otherAccount } = await loadFixture(deployVaultBaseFixture);
+
+            // Run
+            await vault.setRelayer(otherAccount.address);
+
+            // Test
+            expect(await vault.relayer()).to.equal(otherAccount.address);
+        });
+
         it('Should set the right initial values and owner', async () => {
             // Prep
             const { vault, owner } = await loadFixture(deployVaultBaseFixture);
@@ -112,6 +128,55 @@ describe('VaultBase', () => {
 
             // Test
             expect(await vault.gov()).to.equal(dummyGov);
+        });
+    });
+
+    describe('Gasless', () => {
+        it('ONLY allows relayer to make meta transaction', async () => {
+            // Prep
+            const { vault, owner, otherAccount } = await loadFixture(deployVaultBaseFixture);
+
+            // Get wallet
+            const signerProvider = owner.provider!;
+            const wallet0PK = ethers.Wallet.createRandom().privateKey;
+            const wallet0 = new ethers.Wallet(wallet0PK, signerProvider);
+
+            // Run
+
+            // Get signature for deposit
+            const data = '0x00';
+            const metaTxRes = await getTransactPermitSignature(
+                wallet0,
+                vault,
+                'ZVault UniswapV2',
+                BigNumber.from('0'),
+                9000,
+                'deposit',
+                data
+            );
+
+            // Test
+            // Set to the wrong relayer intentionally
+            await vault.setRelayer(otherAccount.address);
+
+            // Test
+
+            // Make deposit meta transaction
+            expect(
+                vault.transactUSDWithPermit(
+                    wallet0.address,
+                    BigNumber.from('0'),
+                    9000,
+                    1, // Withdrawal
+                    metaTxRes.deadline,
+                    data,
+                    {
+                        v: metaTxRes.sig.v,
+                        r: metaTxRes.sig.r,
+                        s: metaTxRes.sig.s,
+                    }
+                )
+            ).to.be.revertedWith('!relayer');
         });
     });
 });

@@ -26,10 +26,8 @@ describe('VaultUniswapV2Base', () => {
         
         await vault.deployed();
 
-        // Set swap paths
-        const token0 = chains.avalanche!.tokens.wavax;
-        const token1 = chains.avalanche!.tokens.usdc;
-        const usdc = chains.avalanche!.tokens.usdc;
+        // Set relayer
+        await vault.setRelayer(owner.address);
 
         return { vault, owner, otherAccount };
     }
@@ -123,7 +121,6 @@ describe('VaultUniswapV2Base', () => {
 
             // Prep data payload
             const data = getVaultData();
-            console.log('get vault data: ', data);
             
             // Run
             await usdc.approve(vault.address, amountUSDC);

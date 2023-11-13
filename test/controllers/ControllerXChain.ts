@@ -3,7 +3,7 @@ import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 import { deploymentArgs as deploymentArgsController } from "../../helpers/deployments/controllers/ControllerXChain/deployment";
 import { deploymentArgs as deploymentArgsVault } from "../../helpers/deployments/vaults/VaultUniswapV2/deployment";
-import { chains } from "../../helpers/constants";
+import { chains, zeroAddress } from "../../helpers/constants";
 import { BigNumber } from "ethers";
 import { 
     getPermitSignature,
@@ -24,6 +24,9 @@ describe('ControllerXChain', () => {
         const Controller = await ethers.getContractFactory('ControllerXChain');
         const controller = await upgrades.deployProxy(Controller, initArgs);
         await controller.deployed();
+
+        // Preset params
+        await controller.setRelayer(owner.address);
 
         return { controller, owner, otherAccount };
     }
@@ -127,6 +130,17 @@ describe('ControllerXChain', () => {
     });
 
     describe('Setters', () => {
+        it('Should set relayer', async () => {
+            // Prep
+            const { controller, owner, otherAccount } = await loadFixture(deployControllerXChainFixture);
+
+            // Run
+            await controller.setRelayer(otherAccount.address);
+
+            // Test
+            expect(await controller.relayer()).to.equal(otherAccount.address);
+        });
+
         it('Should set key cross chain parameters', async () => {
             // Prep
             const { controller, owner } = await loadFixture(deployControllerXChainFixture);
@@ -729,6 +743,50 @@ describe('ControllerXChain', () => {
 
             // Assert that cross chain message was emitted
             expect(eventDidEmit('SendMsg(uint8,uint64)', receipt)).to.be.true;
+        });
+
+        it('ONLY allows relayer to make meta transaction', async () => {
+            // Prep
+            const { controller, owner, otherAccount } = await loadFixture(deployControllerXChainFixture);
+            // Get signature for deposit
+            const xcPermitRequest = {
+                dstChain: 1,
+                dstPoolId: 1,
+                remoteControllerXChain: zeroAddress,
+                vault: zeroAddress,
+                originWallet: zeroAddress,
+                dstWallet: zeroAddress,
+                amount: BigNumber.from('1000'),
+                slippageFactor: 9000,
+                dstGasForCall: BigNumber.from('1000'),
+                data: getVaultData(),
+            };
+            const metaTxRes = await getXCRequestPermitSignature(
+                owner,
+                controller,
+                xcPermitRequest,
+                BigNumber.from('0'),
+                'deposit',
+            );
+            // Set to the wrong relayer intentionally
+            await controller.setRelayer(otherAccount.address);
+
+            // Test
+
+            // Make deposit meta transaction
+            expect(controller.requestWithPermit(
+                xcPermitRequest,
+                1,
+                metaTxRes.deadline,
+                {
+                    v: metaTxRes.sig.v,
+                    r: metaTxRes.sig.r,
+                    s: metaTxRes.sig.s,
+                },
+                {
+                    value: BigNumber.from('0'),
+                },
+            )).to.be.revertedWith('!relayer');
         });
     });
 });

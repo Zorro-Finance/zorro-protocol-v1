@@ -103,6 +103,7 @@ abstract contract VaultBase is
     mapping(address => AggregatorV3Interface) public priceFeeds; // Price feeds. Mapping: token address => price feed address (AggregatorV3Interface implementation)
 
     // Gasless
+    address public relayer;
     mapping(address => CountersUpgradeable.Counter) private _nonces;
 
     /* Modifiers */
@@ -112,7 +113,18 @@ abstract contract VaultBase is
         _;
     }
 
+    modifier onlyAllowRelayer() {
+        require(_msgSender() == relayer, "!relayer");
+        _;
+    }
+
     /* Setters */
+
+    /// @notice Sets the only permitted address that can relay permit transactions (e.g. transactUSDWithPermit)
+    /// @param _relayer The address of the relayer
+    function setRelayer(address _relayer) external onlyOwner {
+        relayer = _relayer;
+    }
 
     /// @notice Sets treasury wallet address
     /// @param _treasury The address for the treasury contract/wallet
@@ -173,7 +185,7 @@ abstract contract VaultBase is
         uint256 _deadline,
         bytes memory _data,
         SigComponents calldata _sigComponents
-    ) external whenNotPaused {
+    ) external whenNotPaused onlyAllowRelayer {
         // Init
         uint256 _startGas = gasleft();
 
