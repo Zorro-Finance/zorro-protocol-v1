@@ -79,6 +79,9 @@ abstract contract VaultBase is
         // Governor
         gov = _gov;
 
+        // Relayer
+        relayer = _initVal.relayer;
+
         // EIP712 init
         _initEIP712();
     }

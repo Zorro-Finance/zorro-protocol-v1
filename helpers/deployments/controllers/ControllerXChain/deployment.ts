@@ -12,6 +12,7 @@ const contractInits: ContractInitList<ControllerXChainInit> = {
         tokenWETH: chains.avalanche!.tokens.wavax,
         stablecoinPriceFeed: chains.avalanche!.priceFeeds.usdc,
         ethPriceFeed: chains.avalanche!.priceFeeds.avax,
+        relayer: chains.avalanche!.admin.relayer,
     },
     matic: {
         layerZeroEndpoint: chains.matic!.infra.layerZeroEndpoint,
@@ -23,6 +24,7 @@ const contractInits: ContractInitList<ControllerXChainInit> = {
         tokenWETH: chains.matic!.tokens.wmatic,
         stablecoinPriceFeed: chains.matic!.priceFeeds.usdc,
         ethPriceFeed: chains.matic!.priceFeeds.matic,
+        relayer: chains.matic!.admin.relayer,
     },
 };
 

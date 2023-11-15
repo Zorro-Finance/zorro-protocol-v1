@@ -14,6 +14,7 @@ const contractInits: ContractInitList<VaultUniswapV2Init> = {
         tokenWETH: chains.matic!.tokens.wmatic,
         entranceFeeFactor: vaultFees.entranceFeeFactor,
         withdrawFeeFactor: vaultFees.withdrawFeeFactor,
+        relayer: chains.matic!.admin.relayer,
     },
     avalanche: {
         priceFeeds: {
@@ -26,6 +27,7 @@ const contractInits: ContractInitList<VaultUniswapV2Init> = {
         tokenWETH: chains.avalanche!.tokens.wavax,
         entranceFeeFactor: vaultFees.entranceFeeFactor,
         withdrawFeeFactor: vaultFees.withdrawFeeFactor,
+        relayer: chains.avalanche!.admin.relayer,
     }
 };
 

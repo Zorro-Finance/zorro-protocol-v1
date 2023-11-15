@@ -41,6 +41,7 @@ interface IVault {
         address tokenWETH;
         uint256 entranceFeeFactor;
         uint256 withdrawFeeFactor;
+        address relayer;
     }
 
     struct SigComponents {

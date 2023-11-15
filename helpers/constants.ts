@@ -43,6 +43,7 @@ export const chains: ChainListOpt = {
         admin: {
             timelockOwner: '0xb7f176e376B883816BA5C63077b6b2E5579538ae',
             multiSigOwner: '0x0426B99e80783CB9b7C0741C9c9E1d0FAb3f80e7',
+            relayer: '0xb4529A6dB3dB864A48E565098a5D24f088329270',
         },
     },
     matic: {
@@ -82,6 +83,7 @@ export const chains: ChainListOpt = {
         admin: {
             timelockOwner: '0xa1Ea1421f9945CcB583eE7083AF6F76503415577',
             multiSigOwner: '0x1cE192d20ccD646d8fF9a47D2C4A364bBD1bea1a',
+            relayer: '0x4834f6679c2bE5A8bfceB0067A66556847c54c4C',
         },
     },
     bsc: {
@@ -113,6 +115,7 @@ export const chains: ChainListOpt = {
         admin: {
             timelockOwner: zeroAddress, // TODO: Add in when starting BNB chain
             multiSigOwner: zeroAddress, // TODO: Add in when starting BNB chain
+            relayer: zeroAddress, // TODO: Add in when starting BNB chain
         },
     },
 };

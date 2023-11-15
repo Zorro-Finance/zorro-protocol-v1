@@ -9,4 +9,5 @@ export interface VaultUniswapV2Init {
     tokenWETH: string;
     entranceFeeFactor: number;
     withdrawFeeFactor: number;
+    relayer: string;
 }

@@ -41,6 +41,7 @@ interface ProtocolConfigList {
 interface AdminConfig {
     timelockOwner: string;
     multiSigOwner: string;
+    relayer: string;
 }
 
 interface ChainConfig {

@@ -2,20 +2,20 @@
   "manifestVersion": "3.2",
   "proxies": [
     {
-      "address": "0xD0319f96D1715199Da888DF1088C2fb2861A8Ba6",
-      "txHash": "0xd399446d184f20af52051710afb40197888cc5612731aa9cb71e17a97438d375",
+      "address": "0x0442835eCF34Bda6A68eb6120D63821f01a6Ff12",
+      "txHash": "0x28ae202b556f1488e2d0dac3da8457024736b1053d3cb213ee289ca29442f7e9",
       "kind": "uups"
     },
     {
-      "address": "0x40e9AC0E300e5ae43E5Dbf0dE16feCB3573C643e",
-      "txHash": "0xca844db1e4c32cf2e92c99e387b22f4b760e51a43a9666d9109f1cadec2e7c6c",
+      "address": "0x83750bBBC2C8e2235C9ab3a6aD674fdDb3445886",
+      "txHash": "0xda5a800fba5dc63f435d05132ee062355acfb0515f7d68ae047e5885061637a0",
       "kind": "uups"
     }
   ],
   "impls": {
-    "71d35fb2b070418177aee0af30a107e9ce640c23329465e505fde1c268e678c5": {
-      "address": "0x6B270ac1CEF49c2f5b32ee61066965EcED4Cb103",
-      "txHash": "0x769847df10c00eeb2ebd1c4d058e7e735392f88976deac61de76919891063f83",
+    "158d2d8a33114b1e4d2cdd2d206d7fb261102abd568a3a573998d7bd16121ade": {
+      "address": "0xdCb1a806eeaF004A8ad1A46722a131797543fc7f",
+      "txHash": "0x2d9d6666ffbda70d351c4a0219dbb84ec526f7e8a1f788894947e792687aaf6b",
       "layout": {
         "solcVersion": "0.8.18",
         "storage": [
@@ -122,7 +122,7 @@
             "slot": "303",
             "type": "t_address",
             "contract": "ControllerXChain",
-            "src": "contracts/controllers/ControllerXChain.sol:96"
+            "src": "contracts/controllers/ControllerXChain.sol:98"
           },
           {
             "label": "stargateRouter",
@@ -130,7 +130,7 @@
             "slot": "304",
             "type": "t_address",
             "contract": "ControllerXChain",
-            "src": "contracts/controllers/ControllerXChain.sol:97"
+            "src": "contracts/controllers/ControllerXChain.sol:99"
           },
           {
             "label": "currentChain",
@@ -138,7 +138,7 @@
             "slot": "304",
             "type": "t_uint16",
             "contract": "ControllerXChain",
-            "src": "contracts/controllers/ControllerXChain.sol:98"
+            "src": "contracts/controllers/ControllerXChain.sol:100"
           },
           {
             "label": "sgPoolId",
@@ -146,7 +146,7 @@
             "slot": "305",
             "type": "t_uint256",
             "contract": "ControllerXChain",
-            "src": "contracts/controllers/ControllerXChain.sol:99"
+            "src": "contracts/controllers/ControllerXChain.sol:101"
           },
           {
             "label": "router",
@@ -154,7 +154,7 @@
             "slot": "306",
             "type": "t_address",
             "contract": "ControllerXChain",
-            "src": "contracts/controllers/ControllerXChain.sol:102"
+            "src": "contracts/controllers/ControllerXChain.sol:104"
           },
           {
             "label": "stablecoin",
@@ -162,7 +162,7 @@
             "slot": "307",
             "type": "t_address",
             "contract": "ControllerXChain",
-            "src": "contracts/controllers/ControllerXChain.sol:103"
+            "src": "contracts/controllers/ControllerXChain.sol:105"
           },
           {
             "label": "WETH",
@@ -170,7 +170,7 @@
             "slot": "308",
             "type": "t_address",
             "contract": "ControllerXChain",
-            "src": "contracts/controllers/ControllerXChain.sol:104"
+            "src": "contracts/controllers/ControllerXChain.sol:106"
           },
           {
             "label": "stablecoinPriceFeed",
@@ -178,7 +178,7 @@
             "slot": "309",
             "type": "t_contract(AggregatorV3Interface)45",
             "contract": "ControllerXChain",
-            "src": "contracts/controllers/ControllerXChain.sol:105"
+            "src": "contracts/controllers/ControllerXChain.sol:107"
           },
           {
             "label": "ethPriceFeed",
@@ -186,7 +186,7 @@
             "slot": "310",
             "type": "t_contract(AggregatorV3Interface)45",
             "contract": "ControllerXChain",
-            "src": "contracts/controllers/ControllerXChain.sol:106"
+            "src": "contracts/controllers/ControllerXChain.sol:108"
           },
           {
             "label": "defaultSlippageFactor",
@@ -194,7 +194,7 @@
             "slot": "311",
             "type": "t_uint256",
             "contract": "ControllerXChain",
-            "src": "contracts/controllers/ControllerXChain.sol:107"
+            "src": "contracts/controllers/ControllerXChain.sol:109"
           },
           {
             "label": "relayer",
@@ -202,7 +202,7 @@
             "slot": "312",
             "type": "t_address",
             "contract": "ControllerXChain",
-            "src": "contracts/controllers/ControllerXChain.sol:110"
+            "src": "contracts/controllers/ControllerXChain.sol:112"
           },
           {
             "label": "_nonces",
@@ -210,7 +210,7 @@
             "slot": "313",
             "type": "t_mapping(t_address,t_struct(Counter)2308_storage)",
             "contract": "ControllerXChain",
-            "src": "contracts/controllers/ControllerXChain.sol:111"
+            "src": "contracts/controllers/ControllerXChain.sol:113"
           }
         ],
         "types": {
@@ -269,9 +269,9 @@
         }
       }
     },
-    "fa1e0b846cdb6932ee7343eb4e90c8abc9292132a73de308684ad70d197b78d9": {
-      "address": "0x539ac0FebaD2E40E41479032c9e37e029052f443",
-      "txHash": "0x0a0cb50af785655ae764c8f3bb1fd96c8b78a3e4fa9c146b2beef63183a7d00f",
+    "a8d8b3618075463ce247853c1f05dcef4510793e6f0872a8123054735c877e94": {
+      "address": "0xa1dB8e71a167A50A044F86359ee953E93613FE58",
+      "txHash": "0x644a3b172db4650a1a6d44879be03dfb233835555797e93f864eecedc5f848ee",
       "layout": {
         "solcVersion": "0.8.18",
         "storage": [
@@ -394,7 +394,7 @@
             "slot": "353",
             "type": "t_address",
             "contract": "VaultBase",
-            "src": "contracts/vaults/_VaultBase.sol:89"
+            "src": "contracts/vaults/_VaultBase.sol:92"
           },
           {
             "label": "router",
@@ -402,7 +402,7 @@
             "slot": "354",
             "type": "t_address",
             "contract": "VaultBase",
-            "src": "contracts/vaults/_VaultBase.sol:90"
+            "src": "contracts/vaults/_VaultBase.sol:93"
           },
           {
             "label": "stablecoin",
@@ -410,7 +410,7 @@
             "slot": "355",
             "type": "t_address",
             "contract": "VaultBase",
-            "src": "contracts/vaults/_VaultBase.sol:91"
+            "src": "contracts/vaults/_VaultBase.sol:94"
           },
           {
             "label": "WETH",
@@ -418,7 +418,7 @@
             "slot": "356",
             "type": "t_address",
             "contract": "VaultBase",
-            "src": "contracts/vaults/_VaultBase.sol:92"
+            "src": "contracts/vaults/_VaultBase.sol:95"
           },
           {
             "label": "entranceFeeFactor",
@@ -426,7 +426,7 @@
             "slot": "357",
             "type": "t_uint256",
             "contract": "VaultBase",
-            "src": "contracts/vaults/_VaultBase.sol:95"
+            "src": "contracts/vaults/_VaultBase.sol:98"
           },
           {
             "label": "withdrawFeeFactor",
@@ -434,7 +434,7 @@
             "slot": "358",
             "type": "t_uint256",
             "contract": "VaultBase",
-            "src": "contracts/vaults/_VaultBase.sol:96"
+            "src": "contracts/vaults/_VaultBase.sol:99"
           },
           {
             "label": "defaultSlippageFactor",
@@ -442,7 +442,7 @@
             "slot": "359",
             "type": "t_uint256",
             "contract": "VaultBase",
-            "src": "contracts/vaults/_VaultBase.sol:97"
+            "src": "contracts/vaults/_VaultBase.sol:100"
           },
           {
             "label": "gov",
@@ -450,7 +450,7 @@
             "slot": "360",
             "type": "t_address",
             "contract": "VaultBase",
-            "src": "contracts/vaults/_VaultBase.sol:100"
+            "src": "contracts/vaults/_VaultBase.sol:103"
           },
           {
             "label": "priceFeeds",
@@ -458,7 +458,7 @@
             "slot": "361",
             "type": "t_mapping(t_address,t_contract(AggregatorV3Interface)45)",
             "contract": "VaultBase",
-            "src": "contracts/vaults/_VaultBase.sol:103"
+            "src": "contracts/vaults/_VaultBase.sol:106"
           },
           {
             "label": "relayer",
@@ -466,7 +466,7 @@
             "slot": "362",
             "type": "t_address",
             "contract": "VaultBase",
-            "src": "contracts/vaults/_VaultBase.sol:106"
+            "src": "contracts/vaults/_VaultBase.sol:109"
           },
           {
             "label": "_nonces",
@@ -474,7 +474,7 @@
             "slot": "363",
             "type": "t_mapping(t_address,t_struct(Counter)2435_storage)",
             "contract": "VaultBase",
-            "src": "contracts/vaults/_VaultBase.sol:107"
+            "src": "contracts/vaults/_VaultBase.sol:110"
           }
         ],
         "types": {
