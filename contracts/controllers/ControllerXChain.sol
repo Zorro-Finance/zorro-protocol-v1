@@ -83,6 +83,8 @@ contract ControllerXChain is
 
         defaultSlippageFactor = 9900;
 
+        relayer = _initVal.relayer;
+
         // Transfer ownership
         _transferOwnership(_timelockOwner);
 

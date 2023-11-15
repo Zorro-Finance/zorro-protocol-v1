@@ -8,6 +8,7 @@ export interface ControllerXChainInit {
     tokenWETH: string;
     stablecoinPriceFeed: string;
     ethPriceFeed: string;
+    relayer: string;
 }
 
 export interface ContractInitList<T> {

@@ -24,6 +24,8 @@ interface IControllerXChain is IStargateReceiver {
         address tokenWETH;
         address stablecoinPriceFeed;
         address ethPriceFeed;
+
+        address relayer;
     }
 
     struct SigComponents {
