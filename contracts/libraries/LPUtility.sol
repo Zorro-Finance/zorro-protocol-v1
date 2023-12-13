@@ -6,7 +6,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import "../interfaces/Uniswap/IAMMRouter02.sol";
+import "../interfaces/Uniswap/IUniswapV2Router02.sol";
 
 /// @title LPUtility
 /// @notice Library for adding/removing liquidity from LP pools
@@ -26,7 +26,7 @@ library LPUtility {
     /// @param _maxSlippageFactor The max slippage allowed for swaps. 1000 = 0 %, 995 = 0.5%, etc.
     /// @param _recipient The recipient of the LP token
     function joinPool(
-        IAMMRouter02 _uniRouter,
+        IUniswapV2Router02 _uniRouter,
         address _token0,
         address _token1,
         uint256 _token0Amt,
@@ -58,7 +58,7 @@ library LPUtility {
     /// @param _maxSlippageFactor The max slippage allowed for swaps. 10000 = 0 %, 9950 = 0.5%, etc.
     /// @param _recipient The recipient of the underlying tokens upon pool exit
     function exitPool(
-        IAMMRouter02 _uniRouter,
+        IUniswapV2Router02 _uniRouter,
         uint256 _amountLP,
         address _pool,
         address _token0,

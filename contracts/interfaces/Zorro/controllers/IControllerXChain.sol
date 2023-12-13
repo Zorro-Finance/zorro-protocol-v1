@@ -24,6 +24,8 @@ interface IControllerXChain is IStargateReceiver {
         address tokenWETH;
         address stablecoinPriceFeed;
         address ethPriceFeed;
+
+        address relayer;
     }
 
     struct SigComponents {
@@ -42,6 +44,7 @@ interface IControllerXChain is IStargateReceiver {
         uint256 amount;
         uint256 slippageFactor;
         uint256 dstGasForCall;
+        bytes data;
     }
 
     struct XCRequest {
@@ -55,6 +58,7 @@ interface IControllerXChain is IStargateReceiver {
         uint256 dstGasForCall;
         uint256 feeToReimburse;
         address refundAddress;
+        bytes data;
     }
 
     struct StargateSwapParams {
@@ -108,11 +112,13 @@ interface IControllerXChain is IStargateReceiver {
     /// @param _valueUSD Value of stablecoin to deposit on this chain, to be transferred to remote chain for deposit
     /// @param _slippageFactor Acceptable degree of slippage on any transaction (e.g. 9500 = 5%, 9900 = 1% etc.)
     /// @param _wallet Address on destination chain to send vault tokens to post-deposit
+    /// @param _data Data that encodes the pool specific params (e.g. tokens, LP assets, etc.)
     function encodeDepositRequest(
         address _vault,
         uint256 _valueUSD,
         uint256 _slippageFactor,
-        address _wallet
+        address _wallet,
+        bytes memory _data
     ) external view returns (bytes memory);
 
     /// @notice Checks to see how much a cross chain deposit will cost
@@ -129,7 +135,7 @@ interface IControllerXChain is IStargateReceiver {
     ) external view returns (uint256 nativeFee);
 
     /// @notice Prepares and sends a cross chain deposit request. Takes care of necessary financial ops (transfer/locking USD)
-    /// @dev Requires appropriate fee to be paid via msg.value
+    /// @dev Requires appropriate fee to be paid via msg.value and allowance of USD on this contract
     /// @param _dstChain LZ chain ID of the destination chain
     /// @param _dstPoolId The Stargate Pool ID to swap with on the remote chain
     /// @param _remoteControllerXChain Zorro ControllerXChain contract address on remote chain
@@ -138,6 +144,7 @@ interface IControllerXChain is IStargateReceiver {
     /// @param _amountUSD The amount of USD to deposit
     /// @param _slippageFactor Slippage tolerance for destination deposit function (9900 = 1%)
     /// @param _dstGasForCall Amount of gas to spend on the cross chain transaction
+    /// @param _data Data that encodes the pool specific params (e.g. tokens, LP assets, etc.)
     function sendDepositRequest(
         uint16 _dstChain,
         uint256 _dstPoolId,
@@ -146,7 +153,8 @@ interface IControllerXChain is IStargateReceiver {
         address _dstWallet,
         uint256 _amountUSD,
         uint256 _slippageFactor,
-        uint256 _dstGasForCall
+        uint256 _dstGasForCall,
+        bytes memory _data
     ) external payable;
 
     /// @notice Dummy function for receiving deposit request
@@ -155,11 +163,13 @@ interface IControllerXChain is IStargateReceiver {
     /// @param _valueUSD The amount of USD to deposit
     /// @param _slippageFactor Acceptable degree of slippage on any transaction (e.g. 9500 = 5%, 9900 = 1% etc.)
     /// @param _wallet The wallet on the current (receiving) chain that should receive the vault token upon deposit
+    /// @param _data Data that encodes the pool specific params (e.g. tokens, LP assets, etc.)
     function receiveDepositRequest(
         address _vault,
         uint256 _valueUSD,
         uint256 _slippageFactor,
-        address _wallet
+        address _wallet,
+        bytes memory _data
     ) external;
 
     /* Withdrawals */
@@ -184,23 +194,26 @@ interface IControllerXChain is IStargateReceiver {
     ) external view returns (uint256 nativeFee);
 
     /// @notice Withdraws funds on chain and bridges to a destination wallet on a remote chain
+    /// @dev Requires approval of asset token on the vault contract
     /// @param _dstChain The remote LZ chain ID to bridge funds to
     /// @param _dstPoolId The pool ID to swap tokens on the remote chain
     /// @param _remoteControllerXChain The ControllerXChain contract on the remote chain
     /// @param _vault Vault address on current chain to withdraw funds from
-    /// @param _shares Number of shares of the vault to withdraw
+    /// @param _amount Number of tokens of the vault to withdraw
     /// @param _slippageFactor Acceptable degree of slippage on any transaction (e.g. 9500 = 5%, 9900 = 1% etc.)
     /// @param _dstWallet The address on the remote chain to send bridged funds to
     /// @param _dstGasForCall Amount of gas to spend on the cross chain transaction
+    /// @param _data Data that encodes the pool specific params (e.g. tokens, LP assets, etc.)
     function sendWithdrawalRequest(
         uint16 _dstChain,
         uint256 _dstPoolId,
         bytes calldata _remoteControllerXChain,
         address _vault,
-        uint256 _shares,
+        uint256 _amount,
         uint256 _slippageFactor,
         address _dstWallet,
-        uint256 _dstGasForCall
+        uint256 _dstGasForCall,
+        bytes memory _data
     ) external payable;
 
     /// @notice Dummy function for receiving withdrawn funds on a remote chain

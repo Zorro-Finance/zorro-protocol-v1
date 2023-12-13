@@ -1,9 +1,10 @@
-import { time, loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
+import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
-import { deploymentArgs } from '../../helpers/deployments/vaults/VaultAMM/TraderJoe/deployment';
-import { zeroAddress, chains, vaultFees } from "../../helpers/constants";
+import { deploymentArgs } from '../../helpers/deployments/vaults/VaultUniswapV2/deployment';
+import { chains, vaultFees } from "../../helpers/constants";
+import { getTransactPermitSignature } from "../../helpers/tests/metatx";
+import { BigNumber } from "ethers";
 
 describe('VaultBase', () => {
     async function deployVaultBaseFixture() {
@@ -11,22 +12,38 @@ describe('VaultBase', () => {
         const [owner, otherAccount] = await ethers.getSigners();
 
         // Get init arguments for contract deployment
-        const initArgs: any[] = deploymentArgs('avalanche', 'TJ_AVAX_USDC', owner.address, owner.address);
+        const initArgs: any[] = deploymentArgs('avalanche', owner.address, owner.address);
 
         // Get contract factory
-        const Vault = await ethers.getContractFactory('TraderJoeAMMV1');
-        const beacon = await upgrades.deployBeacon(Vault);
-        await beacon.deployed();
-
-        const vault = await upgrades.deployBeaconProxy(beacon, Vault, initArgs, {
-            kind: 'beacon',
-        });
+        const Vault = await ethers.getContractFactory('VaultUniswapV2');
+        const vault = await upgrades.deployProxy(
+            Vault,
+            initArgs,
+            {
+                kind: 'uups',
+            }
+        );
+        
         await vault.deployed();
+
+        // Preset params
+        await vault.setRelayer(owner.address);
 
         return { vault, owner, otherAccount };
     }
 
-    describe('Depoloyment', () => {
+    describe('Deployment', () => {
+        it('Should set relayer', async () => {
+            // Prep
+            const { vault, otherAccount } = await loadFixture(deployVaultBaseFixture);
+
+            // Run
+            await vault.setRelayer(otherAccount.address);
+
+            // Test
+            expect(await vault.relayer()).to.equal(otherAccount.address);
+        });
+
         it('Should set the right initial values and owner', async () => {
             // Prep
             const { vault, owner } = await loadFixture(deployVaultBaseFixture);
@@ -38,9 +55,6 @@ describe('VaultBase', () => {
             const entranceFeeFactor = await vault.entranceFeeFactor();
             const withdrawFeeFactor = await vault.withdrawFeeFactor();
             const defaultSlippageFactor = await vault.defaultSlippageFactor();
-            const name = await vault.name();
-            const symbol = await vault.symbol();
-            const decimals = await vault.decimals();
 
             // Test
             expect(treasury).to.equal(chains.avalanche!.admin.multiSigOwner);
@@ -49,9 +63,6 @@ describe('VaultBase', () => {
             expect(entranceFeeFactor).to.equal(vaultFees.entranceFeeFactor);
             expect(withdrawFeeFactor).to.equal(vaultFees.withdrawFeeFactor);
             expect(defaultSlippageFactor).to.equal(9900);
-            expect(name).to.equal('ZOR LP Vault');
-            expect(symbol).to.equal('ZLPV');
-            expect(decimals).to.equal(18);
         });
     });
 
@@ -94,23 +105,6 @@ describe('VaultBase', () => {
             expect(await vault.defaultSlippageFactor()).to.equal(newSlippage);
         });
 
-        it('Should set swap paths', async () => {
-            // Prep
-            const { vault, owner } = await loadFixture(deployVaultBaseFixture);
-            const newSwapPath = [];
-            for (let i = 0; i < 2; i++) {
-                newSwapPath.push(ethers.Wallet.createRandom().address);
-
-            }
-
-            // Run
-            await vault.setSwapPaths(newSwapPath);
-
-            // Test
-            expect(await vault.swapPaths(newSwapPath[0], newSwapPath[1], 0)).to.equal(newSwapPath[0]);
-            expect(await vault.swapPaths(newSwapPath[0], newSwapPath[1], 1)).to.equal(newSwapPath[1]);
-        });
-
         it('Should set a price feed for a token', async () => {
             // Prep
             const { vault, owner } = await loadFixture(deployVaultBaseFixture);
@@ -138,86 +132,51 @@ describe('VaultBase', () => {
     });
 
     describe('Gasless', () => {
-        it('should permit gasless approval', async () => {
+        it('ONLY allows relayer to make meta transaction', async () => {
             // Prep
-            // Get vault
-            const { vault, owner } = await loadFixture(deployVaultBaseFixture);
-            const vaultName = await vault.name();
+            const { vault, owner, otherAccount } = await loadFixture(deployVaultBaseFixture);
 
             // Get wallet
-            const provider = ethers.getDefaultProvider();
             const signerProvider = owner.provider!;
             const wallet0PK = ethers.Wallet.createRandom().privateKey;
             const wallet0 = new ethers.Wallet(wallet0PK, signerProvider);
-            const wallet1PK = ethers.Wallet.createRandom().privateKey;
-            const wallet1 = new ethers.Wallet(wallet1PK, signerProvider);
-
-            // Get chain
-            const { chainId } = await signerProvider.getNetwork();
-
-            // Sign a permit transaction
-            const domain = {
-                name: vaultName,
-                version: '1',
-                chainId, // 0xA86A,
-                verifyingContract: vault.address,
-            };
-            const types = {
-                Permit: [
-                    { name: 'owner', type: 'address' },
-                    { name: 'spender', type: 'address' },
-                    { name: 'value', type: 'uint256' },
-                    { name: 'nonce', type: 'uint256' },
-                    { name: 'deadline', type: 'uint256' },
-                ],
-            };
-            const nonce = await vault.nonces(wallet0.address);
-            const now = await time.latest();
-            const deadline = now + 600;
-            const amount = ethers.utils.parseEther('1');
-            const value = {
-                owner: wallet0.address,
-                spender: wallet1.address,
-                value: amount,
-                nonce,
-                deadline,
-            };
-
-            const signature = await wallet0._signTypedData(domain, types, value);
-            const sig = ethers.utils.splitSignature(signature);
 
             // Run
-            // Send permit request
-            const gasPrice = await provider.getGasPrice();
-            const data = vault.interface.encodeFunctionData('permit', [
-                wallet0.address,
-                wallet1.address,
-                amount,
-                deadline,
-                sig.v,
-                sig.r,
-                sig.s,
-            ]);
-            const tx = await owner.sendTransaction({
-                to: vault.address,
-                data,
-                gasPrice,
-                gasLimit: 100000 //hardcoded gas limit; change if needed   
-            });
-            await tx.wait();
+
+            // Get signature for deposit
+            const data = '0x00';
+            const metaTxRes = await getTransactPermitSignature(
+                wallet0,
+                vault,
+                'ZVault UniswapV2',
+                BigNumber.from('0'),
+                9000,
+                'deposit',
+                data
+            );
 
             // Test
-            // Verify that signature was calculated correctly and signed by signer
-            const recovered = ethers.utils.verifyTypedData(
-                domain,
-                types,
-                value,
-                sig
-            );
-            expect(recovered).to.equal(wallet0.address);
+            // Set to the wrong relayer intentionally
+            await vault.setRelayer(otherAccount.address);
 
-            // Verify approval
-            expect(await vault.allowance(wallet0.address, wallet1.address)).to.equal(amount);
+            // Test
+
+            // Make deposit meta transaction
+            expect(
+                vault.transactUSDWithPermit(
+                    wallet0.address,
+                    BigNumber.from('0'),
+                    9000,
+                    1, // Withdrawal
+                    metaTxRes.deadline,
+                    data,
+                    {
+                        v: metaTxRes.sig.v,
+                        r: metaTxRes.sig.r,
+                        s: metaTxRes.sig.s,
+                    }
+                )
+            ).to.be.revertedWith('!relayer');
         });
     });
 });

@@ -50,16 +50,18 @@ export async function getPermitSignature(
 export async function getTransactPermitSignature(
     signer: SignerWithAddress | Wallet,
     vault: Contract,
+    vaultName: string,
     amount: BigNumber,
     maxSlippageFactor: BigNumberish,
-    direction: 'deposit' | 'withdraw'
+    direction: 'deposit' | 'withdraw',
+    data: string
 ) {
     // Get chain
     const { chainId } = await signer.provider!.getNetwork();
 
     // Sign a permit transaction
     const domain = {
-        name: await vault.name(),
+        name: vaultName,
         version: '1',
         chainId, // 0xA86A,
         verifyingContract: vault.address,
@@ -72,6 +74,7 @@ export async function getTransactPermitSignature(
             { name: 'direction', type: 'uint8' },
             { name: 'nonce', type: 'uint256' },
             { name: 'deadline', type: 'uint256' },
+            { name: 'data', type: 'bytes' },
         ],
     };
     const nonce = await vault.nonces(signer.address);
@@ -84,6 +87,7 @@ export async function getTransactPermitSignature(
         direction: direction === 'deposit' ? 0 : 1,
         nonce,
         deadline,
+        data,
     };
 
     // Calculate and return serialized and split sigs
@@ -128,6 +132,7 @@ export async function getXCRequestPermitSignature(
             { name: 'amount', type: 'uint256' },
             { name: 'slippageFactor', type: 'uint256' },
             { name: 'dstGasForCall', type: 'uint256' },
+            { name: 'data', type: 'bytes' },
         ],
     };
     const nonce = await controller.nonces(signer.address);
@@ -158,4 +163,5 @@ export interface XCPermitRequest {
     amount: BigNumber;
     slippageFactor: number;
     dstGasForCall: BigNumber;
+    data: string;
 }

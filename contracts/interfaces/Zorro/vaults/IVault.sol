@@ -2,38 +2,22 @@
 
 pragma solidity ^0.8.18;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 /// @title IVault
 /// @notice Interface for all vaults
-interface IVault is IERC20Upgradeable {
+interface IVault {
     /* Events */
-
-    event DepositAsset(
-        address indexed _pool,
-        uint256 indexed _amount,
-        uint256 indexed _sharesAdded
-    );
 
     event DepositUSD(
         address indexed _pool,
         uint256 indexed _amountUSD,
-        uint256 indexed _sharesAdded,
         uint256 _maxSlippageFactor
-    );
-
-    event WithdrawAsset(
-        address indexed _pool,
-        uint256 indexed _shares,
-        uint256 indexed _amountAssetRemoved
     );
 
     event WithdrawUSD(
         address indexed _pool,
         uint256 indexed _amountUSD,
-        uint256 indexed _sharesRemoved,
         uint256 _maxSlippageFactor
     );
 
@@ -44,13 +28,26 @@ interface IVault is IERC20Upgradeable {
 
     /* Structs */
 
+    struct VaultPriceFeeds {
+        address eth;
+        address stablecoin;
+    }
+
     struct VaultInit {
+        VaultPriceFeeds priceFeeds;
         address treasury;
         address router;
         address stablecoin;
         address tokenWETH;
         uint256 entranceFeeFactor;
         uint256 withdrawFeeFactor;
+        address relayer;
+    }
+
+    struct SigComponents {
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
     }
 
     /* Functions */
@@ -93,70 +90,55 @@ interface IVault is IERC20Upgradeable {
 
     // Cash flow operations
 
-    /// @notice Deposits main asset token into vault
-    /// @param _amount The amount of asset to deposit
-    function deposit(uint256 _amount) external;
-
     /// @notice Converts USD* to main asset and deposits it
     /// @param _amountUSD The amount of USD to deposit
-    /// @param _maxSlippageFactor Max amount of slippage tolerated per AMM operation (9900 = 1%)
+    /// @param _maxSlippageFactor Max amount of slippage tolerated per UniswapV2 operation (9900 = 1%)
+    /// @param _source Where the USD should be transfered from (requires approval)
+    /// @param _recipient Where the received tokens should be sent to
+    /// @param _data Data that encodes the pool specific params (e.g. tokens, LP assets, etc.)
     function depositUSD(
         uint256 _amountUSD,
-        uint256 _maxSlippageFactor
+        uint256 _maxSlippageFactor,
+        address _source,
+        address _recipient,
+        bytes memory _data
     ) external;
 
-    /// @notice Withdraws main asset and sends back to sender
-    /// @param _shares The number of shares of the main asset to withdraw
-    function withdraw(uint256 _shares) external;
-
     /// @notice Withdraws main asset, converts to USD*, and sends back to sender
-    /// @param _shares The number of shares of the main asset to withdraw
-    /// @param _maxSlippageFactor Max amount of slippage tolerated per AMM operation (9900 = 1%)
-    function withdrawUSD(uint256 _shares, uint256 _maxSlippageFactor) external;
+    /// @param _amount The number of units of the main asset to withdraw (e.g. LP tokens) (Units will vary so see child contract)
+    /// @param _maxSlippageFactor Max amount of slippage tolerated per UniswapV2 operation (9900 = 1%)
+    /// @param _source Where the investment tokens (e.g. LP tokens, shares, etc.) should be transfered from (requires approval)
+    /// @param _recipient Where the withdrawn USD should be sent to
+    /// @param _data Data that encodes the pool specific params (e.g. tokens, LP assets, etc.)
+    function withdrawUSD(
+        uint256 _amount, 
+        uint256 _maxSlippageFactor,
+        address _source,
+        address _recipient,
+        bytes memory _data
+    ) external;
 
     /// @notice Performs gasless deposits/withdrawals from/to USD using a signature
     /// @dev WARNING This function reimburses the relayer based on the gas sent with the tx. Therefore, please only sign using trusted 
     /// dApps or their relayers could collect excess gas reimbursement.
-    /// @param _account Account that is signing this transaction
-    /// @param _amount The amount of USD (for deposits) or shares (for withdrawals)
-    /// @param _maxSlippageFactor Max amount of slippage tolerated per AMM operation (9900 = 1%)
+    /// @param _account Account that is signing this transaction (source of and recipient of tokens)
+    /// @param _amount The amount of USD (for deposits) or tokens (for withdrawals)
+    /// @param _maxSlippageFactor Max amount of slippage tolerated per UniswapV2 operation (9900 = 1%)
     /// @param _direction 0 for deposit and 1 for withdrawal
     /// @param _deadline Deadline for signature to be valid
-    /// @param _v Elliptical sig param v
-    /// @param _r Elliptical sig param r
-    /// @param _s Elliptical sig param s
+    /// @param _data Data that encodes the pool specific params (e.g. tokens, LP assets, etc.)
+    /// @param _sigComponents Elliptical sig params
     function transactUSDWithPermit(
         address _account,
         uint256 _amount,
         uint256 _maxSlippageFactor,
         uint8 _direction,
         uint256 _deadline,
-        uint8 _v,
-        bytes32 _r,
-        bytes32 _s
+        bytes memory _data,
+        SigComponents calldata _sigComponents
     ) external;
 
     // Token operations
-
-    /// @notice Shows swap paths for a given start and end token
-    /// @param _startToken The origin token to swap from
-    /// @param _endToken The destination token to swap to
-    /// @param _index The index of the swap path to retrieve the token for
-    /// @return The token address
-    function swapPaths(
-        address _startToken,
-        address _endToken,
-        uint256 _index
-    ) external view returns (address);
-
-    /// @notice Shows the length of the swap path for a given start and end token
-    /// @param _startToken The origin token to swap from
-    /// @param _endToken The destination token to swap to
-    /// @return The length of the swap paths
-    function swapPathLength(
-        address _startToken,
-        address _endToken
-    ) external view returns (uint16);
 
     /// @notice Returns a Chainlink-compatible price feed for a provided token address, if it exists
     /// @param _token The token to return a price feed for

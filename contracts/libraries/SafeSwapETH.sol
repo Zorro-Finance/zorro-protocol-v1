@@ -10,7 +10,7 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 import "./PriceFeed.sol";
 
-import "../interfaces/Uniswap/IAMMRouter02.sol";
+import "../interfaces/Uniswap/IUniswapV2Router02.sol";
 
 import "../interfaces/TraderJoe/IJoeRouter02.sol";
 
@@ -125,7 +125,7 @@ library SafeSwapUniETH {
             );
         } else {
             // Generic router (Uniswap)
-            IAMMRouter02(_uniRouter).swapTokensForExactETH(
+            IUniswapV2Router02(_uniRouter).swapTokensForExactETH(
                 _amountOutETH,
                 _amountInMax,
                 _path,
@@ -136,7 +136,7 @@ library SafeSwapUniETH {
     }
 
     /// @notice Prepares token price data by attempting to use price feed oracle
-    /// @dev Will assign price of zero in the absence of a feed. Subsequent funcs will need to recognize this and use the AMM price or some other source
+    /// @dev Will assign price of zero in the absence of a feed. Subsequent funcs will need to recognize this and use the UniswapV2 price or some other source
     /// @param _startToken The origin token (to swap FROM)
     /// @param _endToken The destination token (to swap TO)
     /// @param _priceFeedStart The Chainlink compatible price feed of the start token
@@ -175,7 +175,7 @@ library SafeSwapUniETH {
     }
 
     /// @notice Calculate max amount IN (account for slippage)
-    /// @dev Tries to calculate based on price feed oracle if present, or via the AMM router
+    /// @dev Tries to calculate based on price feed oracle if present, or via the UniswapV2 router
     /// @param _uniRouter Uniswap V2 router
     /// @param _amountOutETH The exact quantity of ETH to receive
     /// @param _path The path to take for the swap
@@ -244,7 +244,7 @@ library SafeSwapUniETH {
         address[] memory _path,
         uint256 _slippageFactor
     ) internal view returns (uint256 amountIn) {
-        uint256[] memory amounts = IAMMRouter02(_uniRouter).getAmountsIn(
+        uint256[] memory amounts = IUniswapV2Router02(_uniRouter).getAmountsIn(
             _amountOutETH,
             _path
         );

@@ -2,14 +2,15 @@ import { time, loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 import { deploymentArgs as deploymentArgsController } from "../../helpers/deployments/controllers/ControllerXChain/deployment";
-import { deploymentArgs as deploymentArgsVault } from "../../helpers/deployments/vaults/VaultAMM/TraderJoe/deployment";
-import { chains } from "../../helpers/constants";
+import { deploymentArgs as deploymentArgsVault } from "../../helpers/deployments/vaults/VaultUniswapV2/deployment";
+import { chains, zeroAddress } from "../../helpers/constants";
 import { BigNumber } from "ethers";
 import { 
     getPermitSignature,
     getXCRequestPermitSignature,
 } from "../../helpers/tests/metatx";
 import { eventDidEmit } from "../../helpers/deployments/utilities";
+import _ from 'lodash';
 
 describe('ControllerXChain', () => {
     async function deployControllerXChainFixture() {
@@ -24,26 +25,36 @@ describe('ControllerXChain', () => {
         const controller = await upgrades.deployProxy(Controller, initArgs);
         await controller.deployed();
 
+        // Preset params
+        await controller.setRelayer(owner.address);
+
         return { controller, owner, otherAccount };
     }
 
-    async function deployVaultAMMBaseFixture() {
+    async function deployVaultBaseFixture() {
         // Contracts are deployed using the first signer/account by default
         const [owner, otherAccount] = await ethers.getSigners();
 
         // Get init arguments for contract deployment
-        const initArgs: any[] = deploymentArgsVault('avalanche', 'TJ_AVAX_USDC', owner.address, owner.address);
-        initArgs[0].isFarmable = true; // Override
+        const initArgs: any[] = deploymentArgsVault('avalanche', owner.address, owner.address);
 
         // Get contract factory
-        const Vault = await ethers.getContractFactory('TraderJoeAMMV1');
-        const beacon = await upgrades.deployBeacon(Vault);
-        await beacon.deployed();
-
-        const vault = await upgrades.deployBeaconProxy(beacon.address, Vault, initArgs, {
-            kind: 'beacon',
-        });
+        const Vault = await ethers.getContractFactory('VaultUniswapV2');
+        const vault = await upgrades.deployProxy(
+            Vault,
+            initArgs,
+            {
+                kind: 'uups',
+            }
+        );
+        
         await vault.deployed();
+
+        // Set swap paths
+        const token0 = chains.avalanche!.tokens.wavax;
+        const token1 = chains.avalanche!.tokens.usdc;
+        const usdc = chains.avalanche!.tokens.usdc;
+
 
         return { vault, owner, otherAccount };
     }
@@ -70,6 +81,22 @@ describe('ControllerXChain', () => {
             owner.address,
             (await time.latest()) + 120,
             { value: amountETH }
+        );
+    }
+
+    function getVaultData() {
+        const {pool} = chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC;
+        const router = chains.avalanche!.infra.uniRouterAddress;
+        const token0 = chains.avalanche!.tokens.wavax;
+        const token1 = chains.avalanche!.tokens.usdc;
+        const usdc = chains.avalanche!.tokens.usdc;
+
+        const abiCoder = ethers.utils.defaultAbiCoder;
+        return abiCoder.encode(
+            ['tuple(address,address,address,address,address[],address[])'],
+            [
+                [router, pool, token0, token1, [token0, usdc], [token1, usdc]],
+            ]
         );
     }
 
@@ -103,6 +130,17 @@ describe('ControllerXChain', () => {
     });
 
     describe('Setters', () => {
+        it('Should set relayer', async () => {
+            // Prep
+            const { controller, owner, otherAccount } = await loadFixture(deployControllerXChainFixture);
+
+            // Run
+            await controller.setRelayer(otherAccount.address);
+
+            // Test
+            expect(await controller.relayer()).to.equal(otherAccount.address);
+        });
+
         it('Should set key cross chain parameters', async () => {
             // Prep
             const { controller, owner } = await loadFixture(deployControllerXChainFixture);
@@ -164,9 +202,10 @@ describe('ControllerXChain', () => {
             const valueUSD = ethers.utils.parseUnits('1', 'mwei');
             const wallet = ethers.Wallet.createRandom().address;
             const slippageFactor = 9900;
+            const data = getVaultData();
             const encoded = controller.interface.encodeFunctionData(
                 'receiveDepositRequest',
-                [vault, valueUSD, slippageFactor, wallet]
+                [vault, valueUSD, slippageFactor, wallet, data]
             );
 
             // Run
@@ -174,7 +213,8 @@ describe('ControllerXChain', () => {
                 vault,
                 valueUSD,
                 slippageFactor,
-                wallet
+                wallet,
+                data
             );
 
             // Test
@@ -191,9 +231,10 @@ describe('ControllerXChain', () => {
             const wallet = ethers.Wallet.createRandom().address;
             const slippageFactor = 9900;
             const dstGasForCall = ethers.utils.parseUnits('1', 'mwei');
+            const data = getVaultData();
             const payload = controller.interface.encodeFunctionData(
                 'receiveDepositRequest',
-                [vault, valueUSD, slippageFactor, wallet]
+                [vault, valueUSD, slippageFactor, wallet, data]
             );
 
             // Run
@@ -227,13 +268,14 @@ describe('ControllerXChain', () => {
             const slippageFactor = 9900;
 
             // Deposit quote
+            const data = getVaultData();
             const payload = controller.interface.encodeFunctionData(
                 'receiveDepositRequest',
-                [vault, amountUSD, slippageFactor, dstWallet]
+                [vault, amountUSD, slippageFactor, dstWallet, data]
             );
             const nativeFee = await controller.getDepositQuote(
                 dstChain,
-                remoteControllerXChain,
+                remoteControllerXChainAddr,
                 payload,
                 dstGasForCall
             );
@@ -243,12 +285,13 @@ describe('ControllerXChain', () => {
             const tx = await controller.sendDepositRequest(
                 dstChain,
                 dstPoolId,
-                remoteControllerXChain,
+                remoteControllerXChainAddr,
                 vault,
                 dstWallet,
                 amountUSD,
                 slippageFactor,
                 dstGasForCall,
+                data,
                 {value: nativeFee}
             );
             const receipt = await tx.wait();
@@ -262,7 +305,8 @@ describe('ControllerXChain', () => {
 
             // Get contracts
             const { controller, owner } = await loadFixture(deployControllerXChainFixture);
-            const { vault } = await loadFixture(deployVaultAMMBaseFixture);
+            const { vault } = await loadFixture(deployVaultBaseFixture);
+            const pair = await ethers.getContractAt('IERC20Upgradeable', chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pool);
 
             // Get assets
             await getAssets(ethers.utils.parseEther('10'));
@@ -276,13 +320,15 @@ describe('ControllerXChain', () => {
             const slippageFactor = 9900;
             const usdc = await ethers.getContractAt('IERC20Upgradeable', chains.avalanche!.tokens.usdc);
             const valueUSD = (await usdc.balanceOf(owner.address)).div(10);
+            const data = getVaultData();
             const payload = controller.interface.encodeFunctionData(
                 'receiveDepositRequest',
-                [vault.address, valueUSD, slippageFactor, owner.address]
+                [vault.address, valueUSD, slippageFactor, owner.address, data]
             );
 
             // Simulate sending USDC to controller
             await usdc.transfer(controller.address, valueUSD);
+            const balUSDCOnController = await usdc.balanceOf(controller.address);
 
             // Allow bypassing onlyRegEndpoint modifier
             const layerZeroEndpoint = await controller.layerZeroEndpoint();
@@ -310,7 +356,7 @@ describe('ControllerXChain', () => {
 
             // Test
 
-            expect(await vault.balanceOf(owner.address)).to.be.greaterThan(0);
+            expect(await pair.balanceOf(owner.address)).to.be.greaterThan(0);
         });
     });
 
@@ -362,7 +408,8 @@ describe('ControllerXChain', () => {
 
             // Contracts
             const { controller, owner } = await loadFixture(deployControllerXChainFixture);
-            const { vault } = await loadFixture(deployVaultAMMBaseFixture);
+            const { vault } = await loadFixture(deployVaultBaseFixture);
+            const pair = await ethers.getContractAt('IERC20Upgradeable', chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pool);
 
             // Get USD
             await getAssets(ethers.utils.parseEther('10'));
@@ -372,7 +419,8 @@ describe('ControllerXChain', () => {
             const slippageFactor = 9000;
             const amountUSD = (await usdc.balanceOf(owner.address)).div(10);
             await usdc.approve(vault.address, amountUSD);
-            await vault.depositUSD(amountUSD, slippageFactor);
+            const data = getVaultData();
+            await vault.depositUSD(amountUSD, slippageFactor, owner.address, owner.address, data);
 
             // Args for xchain call
             const dstChain = 102; // BNB
@@ -380,7 +428,7 @@ describe('ControllerXChain', () => {
             const remoteControllerXChainAddr = ethers.Wallet.createRandom().address;
             const abiEncoder = ethers.utils.defaultAbiCoder;
             const remoteControllerXChain = abiEncoder.encode(['address'], [remoteControllerXChainAddr]);
-            const shares = await vault.totalSupply();
+            const lpShares = await pair.balanceOf(owner.address);
             const dstWallet = ethers.Wallet.createRandom().address;
             const dstGasForCall = ethers.utils.parseUnits('1', 'mwei');
 
@@ -395,22 +443,23 @@ describe('ControllerXChain', () => {
             // Get quote
             const nativeFee = await controller.getWithdrawalQuote(
                 dstChain,
-                remoteControllerXChain,
+                remoteControllerXChainAddr,
                 payload,
                 dstGasForCall
             );
 
             // Approve spending of vault token
-            await vault.approve(controller.address, shares);
+            await pair.approve(vault.address, lpShares);
             const tx = await controller.sendWithdrawalRequest(
                 dstChain,
                 dstPoolId,
-                remoteControllerXChain,
+                remoteControllerXChainAddr,
                 vault.address,
-                shares,
+                lpShares,
                 slippageFactor,
                 dstWallet,
                 dstGasForCall,
+                data,
                 {value: nativeFee}
             );
             const receipt = await tx.wait();
@@ -425,7 +474,7 @@ describe('ControllerXChain', () => {
 
             // Get contracts
             const { controller, owner, otherAccount } = await loadFixture(deployControllerXChainFixture);
-            const { vault } = await loadFixture(deployVaultAMMBaseFixture);
+            const { vault } = await loadFixture(deployVaultBaseFixture);
 
             // Get assets
             await getAssets(ethers.utils.parseEther('10'));
@@ -479,7 +528,7 @@ describe('ControllerXChain', () => {
     describe('Gasless', () => {
         it('Deposits USD as a meta transaction, cross chain', async () => {
             // Prep
-            const { vault, owner } = await loadFixture(deployVaultAMMBaseFixture);
+            const { vault, owner } = await loadFixture(deployVaultBaseFixture);
             const { controller } = await loadFixture(deployControllerXChainFixture);
             const dstChain = 102; // BNB
             const dstPoolId = 5; // BUSD
@@ -489,9 +538,14 @@ describe('ControllerXChain', () => {
 
             // Get LP Token
             await getAssets(ethers.utils.parseEther('10'));
-            const usdc = await ethers.getContractAt('ERC20PermitUpgradeable', chains.avalanche!.tokens.usdc);
+            const usdcPermit = await ethers.getContractAt('IERC20PermitUpgradeable', chains.avalanche!.tokens.usdc);
+            const usdcERC20 = await ethers.getContractAt('ERC20Upgradeable', chains.avalanche!.tokens.usdc);
+            const abiUSDC = [
+                ...usdcPermit.interface.format(),
+                ...usdcERC20.interface.format(),
+            ];
+            const usdc = await ethers.getContractAt(abiUSDC, chains.avalanche!.tokens.usdc);
             const balUSDC = await usdc.balanceOf(owner.address);
-            const amountUSDC = balUSDC.div(10);
             const maxMarketMovement = 9900;
 
             // Get wallet
@@ -500,12 +554,13 @@ describe('ControllerXChain', () => {
             const wallet0 = new ethers.Wallet(wallet0PK, signerProvider);
 
             // Transfer USD to wallet for signature
-            await usdc.transfer(wallet0.address, amountUSDC);
+            await usdc.transfer(wallet0.address, balUSDC);
 
             // Deposit quote
+            const data = getVaultData();
             const payload = controller.interface.encodeFunctionData(
                 'receiveDepositRequest',
-                [vault.address, amountUSDC, maxMarketMovement, dstWallet]
+                [vault.address, balUSDC, maxMarketMovement, dstWallet, data]
             );
             const nativeFee = await controller.getDepositQuote(
                 dstChain,
@@ -521,7 +576,7 @@ describe('ControllerXChain', () => {
                 wallet0,
                 controller.address,
                 usdc,
-                amountUSDC,
+                balUSDC,
                 '2'
             );
 
@@ -529,7 +584,7 @@ describe('ControllerXChain', () => {
             await usdc.permit(
                 wallet0.address,
                 controller.address,
-                amountUSDC,
+                balUSDC,
                 deadline,
                 sig.v,
                 sig.r,
@@ -544,9 +599,10 @@ describe('ControllerXChain', () => {
                 vault: vault.address,
                 originWallet: wallet0.address,
                 dstWallet,
-                amount: amountUSDC,
+                amount: balUSDC,
                 slippageFactor: maxMarketMovement,
                 dstGasForCall,
+                data
             };
             const metaTxRes = await getXCRequestPermitSignature(
                 wallet0,
@@ -581,7 +637,8 @@ describe('ControllerXChain', () => {
         it('Withdraws shares to USD as a meta transaction, cross chain', async () => {
             // Prep
             const { controller, owner } = await loadFixture(deployControllerXChainFixture);
-            const { vault } = await loadFixture(deployVaultAMMBaseFixture);
+            const { vault } = await loadFixture(deployVaultBaseFixture);
+            const pair = await ethers.getContractAt('IUniswapV2Pair', chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pool);
             const maxMarketMovement = 9900; // Slippage: 1%
             const dstChain = 102; // BNB
             const dstPoolId = 5; // BUSD
@@ -600,13 +657,14 @@ describe('ControllerXChain', () => {
 
             // Make deposit into vault
             const slippageFactor = 9000;
-            const amountUSD = (await usdc.balanceOf(owner.address)).div(10);
-            await usdc.approve(vault.address, amountUSD);
-            await vault.depositUSD(amountUSD, slippageFactor);
-
-            // Transfer shars to wallet for signature
-            const balShares = await vault.totalSupply();
-            await vault.transfer(wallet0.address, balShares);
+            const balUSDC = await usdc.balanceOf(owner.address);
+            await usdc.approve(vault.address, balUSDC);
+            const data = getVaultData();
+            await vault.depositUSD(balUSDC, slippageFactor, owner.address, owner.address, data);
+            
+            // Transfer shares to wallet for signature
+            const balLPShares = await pair.balanceOf(owner.address);
+            await pair.transfer(wallet0.address, balLPShares);
 
             // Run
 
@@ -624,20 +682,20 @@ describe('ControllerXChain', () => {
                 dstGasForCall
             );
 
-            // Permit share transfer (gasless)
+            // Permit LP share transfer (gasless)
             const { sig, deadline } = await getPermitSignature(
                 wallet0,
-                controller.address,
-                vault,
-                balShares,
+                vault.address,
+                pair,
+                balLPShares,
                 '1'
             );
 
             // Get permit for allowance
-            await vault.permit(
+            await pair.permit(
                 wallet0.address,
-                controller.address,
-                balShares,
+                vault.address,
+                balLPShares,
                 deadline,
                 sig.v,
                 sig.r,
@@ -652,9 +710,10 @@ describe('ControllerXChain', () => {
                 vault: vault.address,
                 originWallet: wallet0.address,
                 dstWallet,
-                amount: balShares,
+                amount: balLPShares,
                 slippageFactor: maxMarketMovement,
                 dstGasForCall,
+                data
             };
             const metaTxRes = await getXCRequestPermitSignature(
                 wallet0,
@@ -684,6 +743,50 @@ describe('ControllerXChain', () => {
 
             // Assert that cross chain message was emitted
             expect(eventDidEmit('SendMsg(uint8,uint64)', receipt)).to.be.true;
+        });
+
+        it('ONLY allows relayer to make meta transaction', async () => {
+            // Prep
+            const { controller, owner, otherAccount } = await loadFixture(deployControllerXChainFixture);
+            // Get signature for deposit
+            const xcPermitRequest = {
+                dstChain: 1,
+                dstPoolId: 1,
+                remoteControllerXChain: zeroAddress,
+                vault: zeroAddress,
+                originWallet: zeroAddress,
+                dstWallet: zeroAddress,
+                amount: BigNumber.from('1000'),
+                slippageFactor: 9000,
+                dstGasForCall: BigNumber.from('1000'),
+                data: getVaultData(),
+            };
+            const metaTxRes = await getXCRequestPermitSignature(
+                owner,
+                controller,
+                xcPermitRequest,
+                BigNumber.from('0'),
+                'deposit',
+            );
+            // Set to the wrong relayer intentionally
+            await controller.setRelayer(otherAccount.address);
+
+            // Test
+
+            // Make deposit meta transaction
+            expect(controller.requestWithPermit(
+                xcPermitRequest,
+                1,
+                metaTxRes.deadline,
+                {
+                    v: metaTxRes.sig.v,
+                    r: metaTxRes.sig.r,
+                    s: metaTxRes.sig.s,
+                },
+                {
+                    value: BigNumber.from('0'),
+                },
+            )).to.be.revertedWith('!relayer');
         });
     });
 });
