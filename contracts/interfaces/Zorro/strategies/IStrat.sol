@@ -2,53 +2,23 @@
 
 pragma solidity ^0.8.18;
 
-import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
-
-/// @title IVault
-/// @notice Interface for all vaults
-interface IVault {
-    /* Events */
-
-    event DepositUSD(
-        address indexed _pool,
-        uint256 indexed _amountUSD,
-        uint256 _maxSlippageFactor
-    );
-
-    event WithdrawUSD(
-        address indexed _pool,
-        uint256 indexed _amountUSD,
-        uint256 _maxSlippageFactor
-    );
-
-    event ReinvestEarnings(
-        uint256 indexed _amtReinvested,
-        address indexed _assetToken
-    );
-
+/// @title IStrat
+/// @notice Interface for all strategies
+interface IStrat {
     /* Structs */
 
-    struct VaultPriceFeeds {
-        address eth;
-        address stablecoin;
-    }
-
-    struct VaultInit {
-        VaultPriceFeeds priceFeeds;
+    struct StratInit {
         address treasury;
-        address router;
         address stablecoin;
-        address tokenWETH;
         uint256 entranceFeeFactor;
         uint256 withdrawFeeFactor;
-        address relayer;
     }
 
-    struct SigComponents {
-        uint8 v;
-        bytes32 r;
-        bytes32 s;
-    }
+    /* Events */
+
+    event DepositUSD(uint256 _amountUSD);
+
+    event WithdrawUSD(uint256 _amountUSD);
 
     /* Functions */
 
@@ -93,13 +63,11 @@ interface IVault {
     /// @notice Converts USD* to main asset and deposits it
     /// @param _amountUSD The amount of USD to deposit
     /// @param _maxSlippageFactor Max amount of slippage tolerated per UniswapV2 operation (9900 = 1%)
-    /// @param _source Where the USD should be transfered from (requires approval)
     /// @param _recipient Where the received tokens should be sent to
-    /// @param _data Data that encodes the pool specific params (e.g. tokens, LP assets, etc.)
+    /// @param _data Data that encodes the pool specific params (e.g. tokens, LP assets, etc.) (See child contract)
     function depositUSD(
         uint256 _amountUSD,
         uint256 _maxSlippageFactor,
-        address _source,
         address _recipient,
         bytes memory _data
     ) external;
@@ -107,45 +75,14 @@ interface IVault {
     /// @notice Withdraws main asset, converts to USD*, and sends back to sender
     /// @param _amount The number of units of the main asset to withdraw (e.g. LP tokens) (Units will vary so see child contract)
     /// @param _maxSlippageFactor Max amount of slippage tolerated per UniswapV2 operation (9900 = 1%)
-    /// @param _source Where the investment tokens (e.g. LP tokens, shares, etc.) should be transfered from (requires approval)
     /// @param _recipient Where the withdrawn USD should be sent to
-    /// @param _data Data that encodes the pool specific params (e.g. tokens, LP assets, etc.)
+    /// @param _data Data that encodes the pool specific params (e.g. tokens, LP assets, etc.) (See child contract)
     function withdrawUSD(
         uint256 _amount, 
         uint256 _maxSlippageFactor,
-        address _source,
         address _recipient,
         bytes memory _data
     ) external;
-
-    /// @notice Performs gasless deposits/withdrawals from/to USD using a signature
-    /// @dev WARNING This function reimburses the relayer based on the gas sent with the tx. Therefore, please only sign using trusted 
-    /// dApps or their relayers could collect excess gas reimbursement.
-    /// @param _account Account that is signing this transaction (source of and recipient of tokens)
-    /// @param _amount The amount of USD (for deposits) or tokens (for withdrawals)
-    /// @param _maxSlippageFactor Max amount of slippage tolerated per UniswapV2 operation (9900 = 1%)
-    /// @param _direction 0 for deposit and 1 for withdrawal
-    /// @param _deadline Deadline for signature to be valid
-    /// @param _data Data that encodes the pool specific params (e.g. tokens, LP assets, etc.)
-    /// @param _sigComponents Elliptical sig params
-    function transactUSDWithPermit(
-        address _account,
-        uint256 _amount,
-        uint256 _maxSlippageFactor,
-        uint8 _direction,
-        uint256 _deadline,
-        bytes memory _data,
-        SigComponents calldata _sigComponents
-    ) external;
-
-    // Token operations
-
-    /// @notice Returns a Chainlink-compatible price feed for a provided token address, if it exists
-    /// @param _token The token to return a price feed for
-    /// @return An AggregatorV3 price feed
-    function priceFeeds(
-        address _token
-    ) external view returns (AggregatorV3Interface);
 
     // Maintenance
 

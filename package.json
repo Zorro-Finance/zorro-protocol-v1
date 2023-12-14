@@ -31,10 +31,11 @@
   "version": "1.0.0",
   "description": "Zorro protocol for managing cross chain DeFi positions",
   "dependencies": {
-    "@chainlink/contracts": "0.4.0",
-    "@openzeppelin/contracts": "^4.8.1",
-    "@openzeppelin/contracts-upgradeable": "^4.5.2",
+    "@openzeppelin/contracts": "^5.0.1",
+    "@openzeppelin/contracts-upgradeable": "^5.0.1",
     "@openzeppelin/hardhat-upgrades": "^1.22.1",
+    "@uniswap/v3-core": "^1.0.1",
+    "@uniswap/v3-periphery": "^1.4.4",
     "defender-admin-client": "^1.41.0",
     "dotenv": "^16.0.3"
   },

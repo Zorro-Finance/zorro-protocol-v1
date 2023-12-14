@@ -150,7 +150,7 @@ contract ControllerXChain is
     /// @param _weth Wrapped ETH token (equivalent native token (e.g. WAVAX, WBNB etc.))
     /// @param _stablecoinPriceFeed Price feed of stablecoin associated with this chain/endpoint on Stargate
     /// @param _stablecoinPriceFeed Price feed of ETH (equivalent native coin (e.g. AVAX, BNB))
-    /// @param _defaultSlippageFactor Default slippage factor for swaps (1% = 9990)
+    /// @param _defaultSlippageFactor Default slippage factor for swaps (1% = 9900)
     function setSwapParams(
         address _router,
         address _stablecoin,
