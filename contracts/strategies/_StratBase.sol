@@ -65,8 +65,7 @@ abstract contract StratBase is
     address public stablecoin;
 
     // Accounting & Fees
-    uint256 public entranceFeeFactor;
-    uint256 public withdrawFeeFactor;
+    uint256 public defaultFeeFactor;
 
     // Governor
     address public gov;
@@ -118,44 +117,6 @@ abstract contract StratBase is
             );
         }
     }
-
-    /* Deposits/Withdrawals (abstract) */
-
-    /// @notice Internal function for depositing USD
-    /// @param _amountUSD Amount of USD to deposit
-    /// @param _maxSlippageFactor Max slippage tolerant (9900 = 1%)
-    /// @param _source Where the USD should be transfered from (requires approval)
-    /// @param _recipient Where the received tokens should be sent to
-    /// @param _relayFee Gas that needs to be compensated to relayer. Set to 0 if n/a
-    /// @param _relayer Where to send gas compensation
-    /// @param _data Data that encodes the pool specific params (e.g. tokens, LP assets, etc.)
-    function _depositUSD(
-        uint256 _amountUSD,
-        uint256 _maxSlippageFactor,
-        address _source,
-        address _recipient,
-        uint256 _relayFee,
-        address _relayer,
-        bytes memory _data
-    ) internal virtual;
-
-    /// @notice Internal function for USD withdrawals
-    /// @param _amount The quantity to withdraw
-    /// @param _maxSlippageFactor Slippage tolerance (9900 = 1%)
-    /// @param _source Where the investment tokens (e.g. LP tokens, shares, etc.) should be transfered from (requires approval)
-    /// @param _recipient Where the withdrawn USD should be sent to
-    /// @param _relayFee Gas that needs to be compensated to relayer. Set to 0 if n/a
-    /// @param _relayer Where to send gas compensation
-    /// @param _data Data that encodes the pool specific params (e.g. tokens, LP assets, etc.)
-    function _withdrawUSD(
-        uint256 _amount,
-        uint256 _maxSlippageFactor,
-        address _source,
-        address _recipient,
-        uint256 _relayFee,
-        address _relayer,
-        bytes memory _data
-    ) internal virtual;
 
     /* Maintenance Functions */
 

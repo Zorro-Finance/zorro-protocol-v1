@@ -9,8 +9,8 @@ library Utils {
     /// @param _bys Bytes array (should be 20 bytes long)
     /// @return addr The resulting address
     function bytesToAddress(bytes memory _bys) internal pure returns (address addr) {
-    assembly {
-      addr := mload(add(_bys, 20))
-    } 
-}
+      assembly {
+        addr := mload(add(_bys, 20))
+      } 
+    }
 }

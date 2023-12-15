@@ -14,12 +14,6 @@ interface IStrat {
         uint256 withdrawFeeFactor;
     }
 
-    /* Events */
-
-    event DepositUSD(uint256 _amountUSD);
-
-    event WithdrawUSD(uint256 _amountUSD);
-
     /* Functions */
 
     // Key wallets/contracts

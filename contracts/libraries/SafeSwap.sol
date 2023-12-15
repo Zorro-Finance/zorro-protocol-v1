@@ -37,7 +37,7 @@ library SafeSwapUni {
         // Safety
         // TODO: Go through all require statements and ensure there's a ZORRO: Prefix for safety
         // Check to make sure the path has at least one uint24 fee + address token pair (3+20)
-        require(_path.length >= 23, "ZORRO: notfullUniV3Path");
+        require(_path.length >= 46, "ZORRO: notfullUniV3Path");
 
         // Decode token from path
         address _tokenIn = Utils.bytesToAddress(_path[:20]);
