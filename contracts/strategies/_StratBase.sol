@@ -62,6 +62,7 @@ abstract contract StratBase is
     // Key wallets/contracts
     address public treasury;
     address public stablecoin;
+    address public router;
 
     // Accounting & Fees
     uint256 public defaultFeeFactor;
@@ -96,6 +97,12 @@ abstract contract StratBase is
     /// @param _gov The address for the governor
     function setGov(address _gov) external onlyOwner {
         gov = _gov;
+    }
+
+    /// @notice Sets router address
+    /// @param _router The address for the router
+    function setRouter(address _router) external onlyOwner {
+        router = _router;
     }
 
     /// @notice Collects protocol trade fees and sends to treasury

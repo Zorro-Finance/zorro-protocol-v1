@@ -38,11 +38,11 @@ contract StratUniswapV3 is StratBase, IStratUniswapV3 {
     /// @inheritdoc	IStratUniswapV3
     function depositUSD(
         uint256 _amountUSD,
-        uint24 _poolFee,
         uint256 _ratioToken0ToToken1,
+        uint24 _poolFee,
         int24[2] calldata _ticks,
         ExecutionData calldata _data
-    ) external {
+    ) external returns (uint256 liquidity) {
         // Safe transfer IN USD*
         IERC20(stablecoin).safeTransferFrom(
             msg.sender,
@@ -74,10 +74,12 @@ contract StratUniswapV3 is StratBase, IStratUniswapV3 {
                 deadline: block.timestamp
             });
             (
-                ,, 
+                ,
+                uint128 _liquidity, 
                 uint256 _amount0, 
                 uint256 _amount1
             ) = INonfungiblePositionManager(_data.nfpManager).mint(_params);
+            liquidity = _liquidity;
 
             // Refunds
             _refundTokens(
@@ -148,7 +150,7 @@ contract StratUniswapV3 is StratBase, IStratUniswapV3 {
         uint256 _amount1Min,
         uint128 _liquidity,
         ExecutionData calldata _data
-    ) external {
+    ) external returns (uint256 amountUSD) {
         // Safe Transfer liquidity tokens IN
         INonfungiblePositionManager(_data.nfpManager).safeTransferFrom(
             msg.sender,
@@ -173,7 +175,7 @@ contract StratUniswapV3 is StratBase, IStratUniswapV3 {
         );
 
         // Collect protocol fees and send funds to user
-        _collectFeeAndXferWithdrawal(_amountUSD, _data.recipient);
+        amountUSD = _collectFeeAndXferWithdrawal(_amountUSD, _data.recipient);
     }
 
     /// @inheritdoc	IStratUniswapV3
@@ -304,7 +306,7 @@ contract StratUniswapV3 is StratBase, IStratUniswapV3 {
 
         // Swap USD* into token0, token1 (if applicable)
         if (_data.token0 != stablecoin) {
-            amount0Avail = _data.router.safeSwap(
+            amount0Avail = ISwapRouter(router).safeSwap(
                 stablecoin,
                 _amount0USDToSwap,
                 _data.exchRate0,
@@ -315,7 +317,7 @@ contract StratUniswapV3 is StratBase, IStratUniswapV3 {
         }
 
         if (_data.token1 != stablecoin) {
-            amount1Avail = _data.router.safeSwap(
+            amount1Avail = ISwapRouter(router).safeSwap(
                 stablecoin,
                 _amount1USDToSwap,
                 _data.exchRate1,
@@ -346,7 +348,7 @@ contract StratUniswapV3 is StratBase, IStratUniswapV3 {
     ) internal returns (uint256 amountUSD) {
         // Swap token0, token1 to USD (if applicable)
         if (_data.token0 != stablecoin) {
-            amountUSD += _data.router.safeSwap(
+            amountUSD += ISwapRouter(router).safeSwap(
                 _data.token0,
                 _amount0,
                 _data.exchRate0,
@@ -357,7 +359,7 @@ contract StratUniswapV3 is StratBase, IStratUniswapV3 {
         }
 
         if (_data.token1 != stablecoin) {
-            amountUSD += _data.router.safeSwap(
+            amountUSD += ISwapRouter(router).safeSwap(
                 _data.token1,
                 _amount1,
                 _data.exchRate1,

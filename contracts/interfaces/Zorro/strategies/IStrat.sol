@@ -25,6 +25,10 @@ interface IStrat {
     /// @return The address of the stablecoin
     function stablecoin() external view returns (address);
 
+    /// @notice The default router address (e.g. UniswapV3's ISwapRouter)
+    /// @return The address of the router
+    function router() external view returns (address);
+
     // Accounting & Fees
 
     /// @notice Default fee - goes to treasury
