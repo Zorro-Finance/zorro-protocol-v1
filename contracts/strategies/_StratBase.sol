@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.18;
+pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 
-import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
@@ -31,8 +31,8 @@ abstract contract StratBase is
 
     /* Libraries */
 
-    using SafeERC20Upgradeable for IERC20Upgradeable;
-    using SafeSwapUni for IUniswapV2Router02;
+    using SafeERC20 for IERC20;
+    using SafeSwapUni for ISwapRouter;
 
     /* Constructor */
 
@@ -48,8 +48,7 @@ abstract contract StratBase is
         // Set initial values
         treasury = _initVal.treasury;
         stablecoin = _initVal.stablecoin;
-        entranceFeeFactor = _initVal.entranceFeeFactor;
-        withdrawFeeFactor = _initVal.withdrawFeeFactor;
+        defaultFeeFactor = _initVal.defaultFeeFactor;
 
         // Transfer ownership to the timelock controller
         _transferOwnership(_timelockOwner);
@@ -86,14 +85,11 @@ abstract contract StratBase is
     }
 
     /// @notice Sets the fee params
-    /// @param _entranceFeeFactor The deposit fee (9900 = 1%)
-    /// @param _withdrawFeeFeeFactor The withdrawal fee (9900 = 1%)
+    /// @param _defaultFeeFactor The default fee (9900 = 1%)
     function setFeeParams(
-        uint256 _entranceFeeFactor,
-        uint256 _withdrawFeeFeeFactor
+        uint256 _defaultFeeFactor
     ) external onlyOwner {
-        entranceFeeFactor = _entranceFeeFactor;
-        withdrawFeeFactor = _withdrawFeeFeeFactor;
+        defaultFeeFactor = _defaultFeeFactor;
     }
 
     /// @notice Sets governor address
@@ -111,7 +107,7 @@ abstract contract StratBase is
     ) internal {
         // Send fee to treasury if a fee is set
         if (_feeFactor < BP_DENOMINATOR) {
-            IERC20Upgradeable(stablecoin).safeTransfer(
+            IERC20(stablecoin).safeTransfer(
                 treasury,
                 (_principalAmt * (BP_DENOMINATOR - _feeFactor)) / BP_DENOMINATOR
             );

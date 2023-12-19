@@ -60,7 +60,7 @@ describe('VaultUniswapV2Base', () => {
         );
 
         // Get USDC balance
-        const usdc = await ethers.getContractAt('IERC20Upgradeable', chains.avalanche!.tokens.usdc);
+        const usdc = await ethers.getContractAt('IERC20', chains.avalanche!.tokens.usdc);
         const balUSDC = await usdc.balanceOf(owner.address);
 
         // Add liquidity, while preserving half of the USDC
@@ -114,8 +114,8 @@ describe('VaultUniswapV2Base', () => {
             
             // Get LP Token
             await getAssets(ethers.utils.parseEther('10'));
-            const usdc = await ethers.getContractAt('IERC20Upgradeable', chains.avalanche!.tokens.usdc);
-            const pool = await ethers.getContractAt('IERC20Upgradeable', chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pool);
+            const usdc = await ethers.getContractAt('IERC20', chains.avalanche!.tokens.usdc);
+            const pool = await ethers.getContractAt('IERC20', chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pool);
             const balUSDC = await usdc.balanceOf(owner.address);
             const amountUSDC = balUSDC.div(10);
 
@@ -143,7 +143,7 @@ describe('VaultUniswapV2Base', () => {
             // Get LP Token
             await getAssets(ethers.utils.parseEther('10'));
             const pair = await ethers.getContractAt('IUniswapV2Pair', chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pool);
-            const usdc = await ethers.getContractAt('IERC20Upgradeable', chains.avalanche!.tokens.usdc);
+            const usdc = await ethers.getContractAt('IERC20', chains.avalanche!.tokens.usdc);
             const balUSDCInitial = await usdc.balanceOf(owner.address);
             const balLPInitial = await pair.balanceOf(owner.address);
             
@@ -174,7 +174,7 @@ describe('VaultUniswapV2Base', () => {
             // Get LP Token
             await getAssets(ethers.utils.parseEther('10'));
             const pair = await ethers.getContractAt('IUniswapV2Pair', chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pool);
-            const usdc = await ethers.getContractAt('IERC20Upgradeable', chains.avalanche!.tokens.usdc);
+            const usdc = await ethers.getContractAt('IERC20', chains.avalanche!.tokens.usdc);
             const balUSDCInitial = await usdc.balanceOf(owner.address);
             const balLPInitial = await pair.balanceOf(owner.address);
 
@@ -283,7 +283,7 @@ describe('VaultUniswapV2Base', () => {
             const { vault, owner } = await loadFixture(deployVaultBaseFixture);
             const maxMarketMovement = 9900; // Slippage: 1%
             const pair = await ethers.getContractAt('IUniswapV2Pair', chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pool);
-            const usdc = await ethers.getContractAt('IERC20Upgradeable', chains.avalanche!.tokens.usdc);
+            const usdc = await ethers.getContractAt('IERC20', chains.avalanche!.tokens.usdc);
             
             // Get LP Token
             await getAssets(ethers.utils.parseEther('10'));

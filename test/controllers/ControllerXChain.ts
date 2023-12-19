@@ -263,7 +263,7 @@ describe('ControllerXChain', () => {
 
             // USD prep
             await getAssets(ethers.utils.parseEther('10'));
-            const usdc = await ethers.getContractAt('IERC20Upgradeable', chains.avalanche!.tokens.usdc);
+            const usdc = await ethers.getContractAt('IERC20', chains.avalanche!.tokens.usdc);
             const amountUSD = (await usdc.balanceOf(owner.address)).div(10);
             const slippageFactor = 9900;
 
@@ -306,7 +306,7 @@ describe('ControllerXChain', () => {
             // Get contracts
             const { controller, owner } = await loadFixture(deployControllerXChainFixture);
             const { vault } = await loadFixture(deployVaultBaseFixture);
-            const pair = await ethers.getContractAt('IERC20Upgradeable', chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pool);
+            const pair = await ethers.getContractAt('IERC20', chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pool);
 
             // Get assets
             await getAssets(ethers.utils.parseEther('10'));
@@ -318,7 +318,7 @@ describe('ControllerXChain', () => {
 
             // Payload for receiving deposit
             const slippageFactor = 9900;
-            const usdc = await ethers.getContractAt('IERC20Upgradeable', chains.avalanche!.tokens.usdc);
+            const usdc = await ethers.getContractAt('IERC20', chains.avalanche!.tokens.usdc);
             const valueUSD = (await usdc.balanceOf(owner.address)).div(10);
             const data = getVaultData();
             const payload = controller.interface.encodeFunctionData(
@@ -409,11 +409,11 @@ describe('ControllerXChain', () => {
             // Contracts
             const { controller, owner } = await loadFixture(deployControllerXChainFixture);
             const { vault } = await loadFixture(deployVaultBaseFixture);
-            const pair = await ethers.getContractAt('IERC20Upgradeable', chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pool);
+            const pair = await ethers.getContractAt('IERC20', chains.avalanche!.protocols.traderjoe.pools.AVAX_USDC.pool);
 
             // Get USD
             await getAssets(ethers.utils.parseEther('10'));
-            const usdc = await ethers.getContractAt('IERC20Upgradeable', chains.avalanche!.tokens.usdc);
+            const usdc = await ethers.getContractAt('IERC20', chains.avalanche!.tokens.usdc);
 
             // Make deposit into vault
             const slippageFactor = 9000;
@@ -485,7 +485,7 @@ describe('ControllerXChain', () => {
             const nonce = 4096;
 
             // Payload for receiving deposit
-            const usdc = await ethers.getContractAt('IERC20Upgradeable', chains.avalanche!.tokens.usdc);
+            const usdc = await ethers.getContractAt('IERC20', chains.avalanche!.tokens.usdc);
             const valueUSD = (await usdc.balanceOf(owner.address)).div(10);
             const payload = controller.interface.encodeFunctionData(
                 'receiveWithdrawalRequest',
@@ -648,7 +648,7 @@ describe('ControllerXChain', () => {
 
             // Get USD
             await getAssets(ethers.utils.parseEther('10'));
-            const usdc = await ethers.getContractAt('IERC20Upgradeable', chains.avalanche!.tokens.usdc);
+            const usdc = await ethers.getContractAt('IERC20', chains.avalanche!.tokens.usdc);
             
             // Get wallet
             const signerProvider = owner.provider!;

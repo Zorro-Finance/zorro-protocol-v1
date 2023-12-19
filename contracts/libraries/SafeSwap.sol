@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 
@@ -13,13 +13,14 @@ import "./Utils.sol";
 library SafeSwapUni {
     /* Libraries */
 
-    using SafeERC20Upgradeable for IERC20Upgradeable;
+    using SafeERC20 for IERC20;
 
     /* Functions */
 
     /// @notice Safely swaps from one token to another
     /// @dev Tries to use a Chainlink price feed oracle if one exists
     /// @param _uniRouter Uniswap V3 router
+    /// @param _tokenIn The address of the input token
     /// @param _exactAmountIn The exact quantity of the origin token to swap
     /// @param _exchRate The exchange rate, expressed as (Qty OUT / Qty IN) * 1e12
     /// @param _maxMarketMovement Acceptable slippage (9900 = 1%)
@@ -28,10 +29,11 @@ library SafeSwapUni {
     /// @return amountOut The quantity of tokens obtained from the swap
     function safeSwap(
         ISwapRouter _uniRouter,
+        address _tokenIn,
         uint256 _exactAmountIn,
         uint256 _exchRate,
         uint256 _maxMarketMovement,
-        bytes calldata _path,
+        bytes memory _path,
         address _recipient
     ) internal returns (uint256 amountOut) {
         // Safety
@@ -39,11 +41,8 @@ library SafeSwapUni {
         // Check to make sure the path has at least one uint24 fee + address token pair (3+20)
         require(_path.length >= 46, "ZORRO: notfullUniV3Path");
 
-        // Decode token from path
-        address _tokenIn = Utils.bytesToAddress(_path[:20]);
-
         // Safe approval
-        IERC20Upgradeable(_tokenIn).safeIncreaseAllowance(
+        IERC20(_tokenIn).safeIncreaseAllowance(
             address(_uniRouter),
             _exactAmountIn
         );
@@ -54,6 +53,7 @@ library SafeSwapUni {
         // Perform swap
         amountOut = _safeSwap(
             _uniRouter,
+            _tokenIn,
             _exactAmountIn,
             _minAmountOut,
             _path,
@@ -64,6 +64,7 @@ library SafeSwapUni {
 
     /// @notice Internal function for safely swapping tokens (lower level than above func)
     /// @param _uniRouter Uniswap V3 router
+    /// @param _tokenIn The address of the input token
     /// @param _exactAmountIn The exact quantity of the origin token to swap
     /// @param _minAmountOut The minimum quantity of destination token to be obtained
     /// @param _path Path for V3 multihops https://docs.uniswap.org/contracts/v3/guides/swaps/multihop-swaps
@@ -72,9 +73,10 @@ library SafeSwapUni {
     /// @return amountOut The quantity of tokens obtained from the swap
     function _safeSwap(
         ISwapRouter _uniRouter,
+        address _tokenIn,
         uint256 _exactAmountIn,
         uint256 _minAmountOut,
-        bytes calldata _path,
+        bytes memory _path,
         address _recipient,
         uint256 _deadline
     ) private returns (uint256 amountOut) {
@@ -92,6 +94,6 @@ library SafeSwapUni {
             });
 
         // Executes the swap.
-        amountOut = swapRouter.exactInput(params);
+        amountOut = _uniRouter.exactInput(_params);
     }
 }
