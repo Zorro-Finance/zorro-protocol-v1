@@ -21,35 +21,28 @@ contract StratUniswapV3 is StratBase, IStratUniswapV3 {
     /* Constructor */
 
     /// @notice Upgradeable constructor
-    /// @param _initVal A StratInit struct
     /// @param _timelockOwner The owner address (timelock)
     /// @param _gov The governor address for non timelock admin functions
+    /// @param _initVal A StratInit struct
     function initialize(
-        StratInit memory _initVal,
         address _timelockOwner,
-        address _gov
+        address _gov,
+        StratInit calldata _initVal
     ) public initializer {
         // Call parent constructor
-        super.__StratBase_init(_initVal, _timelockOwner, _gov);
+        super.__StratBase_init(_timelockOwner, _gov, _initVal);
     }
 
     /* Functions */
 
-    /// @inheritdoc	IStrat
-    /// @dev Abstracts NonFungiblePositionManager.mint()
-    /// @param _data Encoding format: {router}{nfpmanager}{UniV3PathStablecoinToToken0}{UniV3PathStablecoinToToken1}{exchRateToken0PerStablecoin}{exchRateToken1PerStablecoin}
+    /// @inheritdoc	IStratUniswapV3
     function depositUSD(
         uint256 _amountUSD,
-        uint256 _maxSlippageFactor,
-        address _recipient,
-        bytes calldata _data
+        uint24 _poolFee,
+        uint256 _ratioToken0ToToken1,
+        int24[2] calldata _ticks,
+        ExecutionData calldata _data
     ) external {
-        // Unpack data
-        (ExecutionData memory _execData) = abi.decode(
-            _data,
-            (ExecutionData)
-        );
-
         // Safe transfer IN USD*
         IERC20(stablecoin).safeTransferFrom(
             msg.sender,
@@ -60,39 +53,35 @@ contract StratUniswapV3 is StratBase, IStratUniswapV3 {
         // Collect fee on USD deposited
         _collectTradeFee(_amountUSD, defaultFeeFactor);
 
-        // TODO: Should not call getTokenFromPath more than once for the same TX
-        // TODO: Maybe don't need swapStablecoinToTokens and vice versa, but rather have reversal param
-
         // Swap USD to Token0, Token1
-        (uint256 _amount0Avail, uint256 _amount1Avail) = _swapStablecoinToTokens(_execData, _maxSlippageFactor);
+        (uint256 _amount0Avail, uint256 _amount1Avail) = _swapStablecoinToTokens(_ratioToken0ToToken1, _data);
 
         {
 
             // Add liquidity
             INonfungiblePositionManager.MintParams memory _params =
             INonfungiblePositionManager.MintParams({
-                token0: this.getTokenFromPath(_execData.pathToken0, -20),
-                token1: this.getTokenFromPath(_execData.pathToken1, -20),
-                fee: _execData.poolFee,
-                tickLower: _execData.tickLower,
-                tickUpper: _execData.tickUpper,
+                token0: _data.token0,
+                token1: _data.token1,
+                fee: _poolFee,
+                tickLower: _ticks[0],
+                tickUpper: _ticks[1],
                 amount0Desired: _amount0Avail,
                 amount1Desired: _amount1Avail,
-                amount0Min: _amount0Avail * _maxSlippageFactor,
-                amount1Min: _amount1Avail * _maxSlippageFactor,
-                recipient: _recipient,
+                amount0Min: _amount0Avail * _data.maxSlippageFactor,
+                amount1Min: _amount1Avail * _data.maxSlippageFactor,
+                recipient: _data.recipient,
                 deadline: block.timestamp
             });
             (
-                uint256 _tokenId, 
-                uint128 _liquidity, 
+                ,, 
                 uint256 _amount0, 
                 uint256 _amount1
-            ) = INonfungiblePositionManager(_execData.nfpManager).mint(_params);
+            ) = INonfungiblePositionManager(_data.nfpManager).mint(_params);
 
             // Refunds
             _refundTokens(
-                _recipient, 
+                _data.recipient, 
                 IERC20(_params.token0), 
                 IERC20(_params.token1), 
                 _amount0, _amount1, 
@@ -104,18 +93,11 @@ contract StratUniswapV3 is StratBase, IStratUniswapV3 {
 
     /// @inheritdoc	IStratUniswapV3
     function increaseLiquidityUSD(
-        uint256 _tokenId,
         uint256 _amountUSD,
-        uint256 _maxSlippageFactor,
-        address _recipient,
-        bytes calldata _data
+        uint256 _tokenId,
+        uint256 _ratioToken0ToToken1,
+        ExecutionData calldata _data
     ) external returns (uint128 liquidity) {
-        // Unpack data
-        (ExecutionData memory _execData) = abi.decode(
-            _data,
-            (ExecutionData)
-        );
-
         // Safe transfer IN USD*
         IERC20(stablecoin).safeTransferFrom(
             msg.sender,
@@ -127,7 +109,7 @@ contract StratUniswapV3 is StratBase, IStratUniswapV3 {
         _collectTradeFee(_amountUSD, defaultFeeFactor);
 
         // Swap USD to Token0, Token1
-        (uint256 _amount0Avail, uint256 _amount1Avail) = _swapStablecoinToTokens(_execData, _maxSlippageFactor);
+        (uint256 _amount0Avail, uint256 _amount1Avail) = _swapStablecoinToTokens(_ratioToken0ToToken1, _data);
 
         {
             // Add liquidity
@@ -136,21 +118,22 @@ contract StratUniswapV3 is StratBase, IStratUniswapV3 {
                 tokenId: _tokenId,
                 amount0Desired: _amount0Avail,
                 amount1Desired: _amount1Avail,
-                amount0Min: _amount0Avail * _maxSlippageFactor,
-                amount1Min: _amount1Avail * _maxSlippageFactor,
+                amount0Min: _amount0Avail * _data.maxSlippageFactor,
+                amount1Min: _amount1Avail * _data.maxSlippageFactor,
                 deadline: block.timestamp
             });
             (
                 uint128 _liquidity, 
                 uint256 _amount0, 
                 uint256 _amount1
-            ) = INonfungiblePositionManager(_execData.nfpManager).increaseLiquidity(_params);
+            ) = INonfungiblePositionManager(_data.nfpManager).increaseLiquidity(_params);
+            liquidity = _liquidity;
 
             // Refunds
             _refundTokens(
-                _recipient, 
-                IERC20(this.getTokenFromPath(_execData.pathToken0, -20)),
-                IERC20(this.getTokenFromPath(_execData.pathToken1, -20)),
+                _data.recipient, 
+                IERC20(_data.token0),
+                IERC20(_data.token1),
                 _amount0, _amount1, 
                 _amount0Avail, 
                 _amount1Avail
@@ -158,169 +141,120 @@ contract StratUniswapV3 is StratBase, IStratUniswapV3 {
         }
     }
 
-    /// @inheritdoc	IStrat
-    /// @dev Abstracts NonfungiblePositionManager.decreaseLiquidity and .collectFees
-    /// @param _data Encoding format: {router}{nfpmanager}{UniV3PathToken0ToStablecoin}{UniV3PathToken1ToStablecoin}{exchRateStablecoinPerToken0}{exchRateStablecoinPerToken1}
+    /// @inheritdoc	IStratUniswapV3
     function withdrawUSD(
-        uint128 _liquidity,
         uint256 _tokenId,
-        uint256 _maxSlippageFactor,
-        address _recipient,
-        bytes calldata _data
+        uint256 _amount0Min,
+        uint256 _amount1Min,
+        uint128 _liquidity,
+        ExecutionData calldata _data
     ) external {
-        // Unpack data
-        (ExecutionData memory _execData) = abi.decode(
-            _data,
-            (ExecutionData)
-        );
-
         // Safe Transfer liquidity tokens IN
-        INonfungiblePositionManager(_execData.nfpManager).safeTransferFrom(
+        INonfungiblePositionManager(_data.nfpManager).safeTransferFrom(
             msg.sender,
             address(this),
             _tokenId
         );
 
         // Decrease liquidity
-        (uint256 _amount0liq, uint256 _amount1liq) = _decreaseLiquidity(_tokenId, _liquidity, _maxSlippageFactor, _execData);
+        (uint256 _amount0liq, uint256 _amount1liq) = _decreaseLiquidity(_tokenId, _amount0Min, _amount1Min, _liquidity, _data);
 
         // Collect fees
         (uint256 _amount0Fees, uint256 _amount1Fees) = _collectFees(
-            _execData.nfpManager,
-            _tokenId,
-            _maxSlippageFactor,
-            _execData
+            _data.nfpManager,
+            _tokenId
         );
 
         // Swap to USD
         uint256 _amountUSD = _swapTokensToStablecoin(
-            _execData, 
             _amount0liq + _amount0Fees, 
-            _amount1liq + _amount1Fees, 
-            _maxSlippageFactor
+            _amount1liq + _amount1Fees,
+            _data 
         );
 
-        // Protocol Collect fee on USD deposited
-        _collectTradeFee(_amountUSD, defaultFeeFactor);
-
-        // Update remaining USD for withdrawal
-        _amountUSD = IERC20(stablecoin).balanceOf(address(this));
-
-        // Transfer USD*
-        IERC20(stablecoin).safeTransfer(_recipient, _amountUSD);
+        // Collect protocol fees and send funds to user
+        _collectFeeAndXferWithdrawal(_amountUSD, _data.recipient);
     }
 
     /// @inheritdoc	IStratUniswapV3
     function decreaseLiquidityUSD(
         uint256 _tokenId,
+        uint256 _amount0Min,
+        uint256 _amount1Min,
         uint128 _liquidity,
-        uint256 _maxSlippageFactor,
-        address _recipient,
-        bytes calldata _data
+        ExecutionData calldata _data
     ) external returns (uint256 amountUSD) {
-        // TODO: This pattern repeats a lot. Abstract it out
-        // Unpack data
-        (ExecutionData memory _execData) = abi.decode(
-            _data,
-            (ExecutionData)
-        );
-
         // Transfer liquidity IN
-        INonfungiblePositionManager(_execData.nfpManager).safeTransferFrom(msg.sender, address(this), _tokenId);
+        INonfungiblePositionManager(_data.nfpManager).safeTransferFrom(msg.sender, address(this), _tokenId);
 
         // Decrease liquidity
-        (uint256 _amount0, uint256 _amount1) = _decreaseLiquidity(_tokenId, _liquidity, _maxSlippageFactor, _execData);
+        (uint256 _amount0, uint256 _amount1) = _decreaseLiquidity(_tokenId, _amount0Min, _amount1Min, _liquidity, _data);
 
         // Swap to USD
-        amountUSD = _swapTokensToStablecoin(_execData, _amount0, _amount1, _maxSlippageFactor);
+        amountUSD = _swapTokensToStablecoin(_amount0, _amount1, _data);
 
-        // TODO: This pattern also repeats a lot. Abstract it out.
-        // Protocol Collect fee on USD deposited
-        _collectTradeFee(amountUSD, defaultFeeFactor);
-
-        // Update remaining USD for withdrawal
-        amountUSD = IERC20(stablecoin).balanceOf(address(this));
-
-        // Transfer USD*
-        IERC20(stablecoin).safeTransfer(_recipient, amountUSD);
+        // Collect protocol fees and send funds to user
+        amountUSD = _collectFeeAndXferWithdrawal(amountUSD, _data.recipient);
     }
 
     /// @notice Internal function for decreasing liquidity in UniV3. (Does not swap to USD)
     /// @param _tokenId The token ID reprsenting the liquidity position
+    /// @param _amount0Min Min amount of Token0 expected to receive
+    /// @param _amount1Min Min amount of Token1 expected to receive
     /// @param _liquidity The amount of liquidity to decrease by
-    /// @param _maxSlippageFactor Slippage (1% = 9900)
-    /// @param _execData ExecutionData object
+    /// @param _data ExecutionData object
     /// @return amount0 The amount of fees collected in Token0
     /// @return amount1 The amount of fees collected in Token1
     function _decreaseLiquidity(
         uint256 _tokenId,
+        uint256 _amount0Min,
+        uint256 _amount1Min,
         uint128 _liquidity,
-        uint256 _maxSlippageFactor,
-        ExecutionData memory _execData
+        ExecutionData calldata _data
     ) internal returns (uint256 amount0, uint256 amount1) {
         // Decrease liquidity
         INonfungiblePositionManager.DecreaseLiquidityParams memory _params =
             INonfungiblePositionManager.DecreaseLiquidityParams({
                 tokenId: _tokenId,
                 liquidity: _liquidity,
-                amount0Min: 0, // TODO Calculate amounts min
-                amount1Min: 0,
+                amount0Min: _amount0Min,
+                amount1Min: _amount1Min,
                 deadline: block.timestamp
             });
 
-        return INonfungiblePositionManager(_execData.nfpManager).decreaseLiquidity(_params);
+        return INonfungiblePositionManager(_data.nfpManager).decreaseLiquidity(_params);
     }
 
     /// @inheritdoc	IStratUniswapV3
     function collectFeesUSD(
         uint256 _tokenId,
-        uint256 _maxSlippageFactor,
-        address _recipient,
-        bytes calldata _data
+        ExecutionData calldata _data
     ) external returns (uint256 amountUSD) {
-        // Unpack data
-        (ExecutionData memory _execData) = abi.decode(
-            _data,
-            (ExecutionData)
-        );
-
         // Transfer liquidity IN
-        INonfungiblePositionManager(_execData.nfpManager).safeTransferFrom(msg.sender, address(this), _tokenId);
+        INonfungiblePositionManager(_data.nfpManager).safeTransferFrom(msg.sender, address(this), _tokenId);
 
         // Collect earned fees
         (uint256 _amount0, uint256 _amount1) = _collectFees(
-            _execData.nfpManager,
-            _tokenId,
-            _maxSlippageFactor,
-            _execData
+            _data.nfpManager,
+            _tokenId
         );
 
         // Swap to USD
-        amountUSD = _swapTokensToStablecoin(_execData, _amount0, _amount1, _maxSlippageFactor);
+        amountUSD = _swapTokensToStablecoin(_amount0, _amount1, _data);
 
-        // Protocol Collect fee on USD deposited
-        _collectTradeFee(amountUSD, defaultFeeFactor);
-
-        // Update remaining USD for withdrawal
-        amountUSD = IERC20(stablecoin).balanceOf(address(this));
-
-        // Transfer USD*
-        IERC20(stablecoin).safeTransfer(_recipient, amountUSD);
+        // Collect protocol fees and send funds to user
+        amountUSD = _collectFeeAndXferWithdrawal(amountUSD, _data.recipient);
     }
 
     /// @notice Internal function for collecting UniV3 fees earned (does not swap to USD)
     /// @dev Assumes NFT liquidity already transferred in
     /// @param _nfpManager Address of the NonfungiblePositionManager contract
     /// @param _tokenId Token ID of the liquidity position
-    /// @param _maxSlippageFactor Acceptable slippage (9900 = 1%)
-    /// @param _execData ExecutionData struct
     /// @return amount0 The amount of fees collected in Token0
     /// @return amount1 The amount of fees collected in Token1
     function _collectFees(
         address _nfpManager,
-        uint256 _tokenId,
-        uint256 _maxSlippageFactor,
-        ExecutionData calldata _execData
+        uint256 _tokenId
     ) internal returns (uint256 amount0, uint256 amount1) {
         // Collect fees
         INonfungiblePositionManager.CollectParams memory _params =
@@ -334,15 +268,30 @@ contract StratUniswapV3 is StratBase, IStratUniswapV3 {
         return INonfungiblePositionManager(_nfpManager).collect(_params);
     }
 
+    function _collectFeeAndXferWithdrawal(
+        uint256 _amountUSD, 
+        address _recipient
+    ) internal returns (uint256 netAmountUSD) {
+        // Protocol Collect fee on USD deposited
+        _collectTradeFee(_amountUSD, defaultFeeFactor);
+
+        // Update remaining USD for withdrawal
+        netAmountUSD = IERC20(stablecoin).balanceOf(address(this));
+
+        // Transfer USD*
+        IERC20(stablecoin).safeTransfer(_recipient, netAmountUSD);
+    }
+
     /* Utils */
 
     /// @notice Swaps USD to Token0 and Token1
-    /// @param _execData The execution data (contains swap parameters)
+    /// @param _ratioToken0ToToken1 Ratio of ((Qty Token0) / (Qty Token1)) * 1e12
+    /// @param _data The execution data (contains swap parameters)
     /// @return amount0Avail The amount of Token0 obtained. If no swap was needed, shows balance of Token0 instead
     /// @return amount1Avail Same except for Token1
     function _swapStablecoinToTokens(
-        ExecutionData memory _execData,
-        uint256 _maxSlippageFactor
+        uint256 _ratioToken0ToToken1,
+        ExecutionData calldata _data
     ) internal returns (uint256 amount0Avail, uint256 amount1Avail) {
         // Get balance of USD after fees
         uint256 _balUSD = IERC20(stablecoin).balanceOf(
@@ -350,80 +299,70 @@ contract StratUniswapV3 is StratBase, IStratUniswapV3 {
         );
 
         // Get relative amounts of each token
-        uint256 _amount1USDToSwap = _balUSD / (_execData.ratioToken0ToToken1 + 1e12);
+        uint256 _amount1USDToSwap = _balUSD / (_ratioToken0ToToken1 + 1e12);
         uint256 _amount0USDToSwap = _balUSD - _amount1USDToSwap;
 
-        // Get tokens
-        address _token0 = this.getTokenFromPath(_execData.pathToken0, -20);
-        address _token1 = this.getTokenFromPath(_execData.pathToken1, -20);
-
         // Swap USD* into token0, token1 (if applicable)
-        if (_token0 != stablecoin) {
-            amount0Avail = ISwapRouter(_execData.router).safeSwap(
+        if (_data.token0 != stablecoin) {
+            amount0Avail = _data.router.safeSwap(
                 stablecoin,
                 _amount0USDToSwap,
-                _execData.exchRate0,
-                _maxSlippageFactor,
-                _execData.pathToken0,
+                _data.exchRate0,
+                _data.maxSlippageFactor,
+                _data.pathToken0,
                 address(this)
             );
         }
 
-        if (_token1 != stablecoin) {
-            amount1Avail = ISwapRouter(_execData.router).safeSwap(
+        if (_data.token1 != stablecoin) {
+            amount1Avail = _data.router.safeSwap(
                 stablecoin,
                 _amount1USDToSwap,
-                _execData.exchRate1,
-                _maxSlippageFactor,
-                _execData.pathToken1,
+                _data.exchRate1,
+                _data.maxSlippageFactor,
+                _data.pathToken1,
                 address(this)
             );
         }
 
         // If swaps were not performed (e.g. if token was the stablecoin), calculate the balance
         if (amount0Avail == 0) {
-            amount0Avail = IERC20(_token0).balanceOf(address(this));
+            amount0Avail = IERC20(_data.token0).balanceOf(address(this));
         }
         if (amount1Avail == 0) {
-            amount1Avail = IERC20(_token1).balanceOf(address(this));
+            amount1Avail = IERC20(_data.token1).balanceOf(address(this));
         }
     }
 
     /// @notice Swaps Token0 and Token1 into USD (if applicable)
-    /// @param _execData The execution data (contains swap parameters)
     /// @param _amount0 Amount of Token0 to swap
     /// @param _amount1 Amount of Token1 to swap
-    /// @param _maxSlippageFactor Slippage (1% = 9900)
+    /// @param _data The execution data (contains swap parameters)
     /// @return amountUSD The amount of USD obtained
     function _swapTokensToStablecoin(
-        ExecutionData memory _execData,
         uint256 _amount0,
         uint256 _amount1,
-        uint256 _maxSlippageFactor
+        ExecutionData calldata _data
     ) internal returns (uint256 amountUSD) {
-        // Get tokens
-        address _token0 = this.getTokenFromPath(_execData.pathToken0, 0);
-        address _token1 = this.getTokenFromPath(_execData.pathToken1, 0);
-
         // Swap token0, token1 to USD (if applicable)
-        if (_token0 != stablecoin) {
-            amountUSD += ISwapRouter(_execData.router).safeSwap(
-                _token0,
+        if (_data.token0 != stablecoin) {
+            amountUSD += _data.router.safeSwap(
+                _data.token0,
                 _amount0,
-                _execData.exchRate0, // TODO: Is it this or the inverse?
-                _maxSlippageFactor,
-                _execData.pathToken0,
+                _data.exchRate0,
+                _data.maxSlippageFactor,
+                _data.pathToken0,
                 address(this)
             );
         }
 
-        if (_token1 != stablecoin) {
-            amountUSD += ISwapRouter(_execData.router).safeSwap(
-                _token1,
+        if (_data.token1 != stablecoin) {
+            amountUSD += _data.router.safeSwap(
+                _data.token1,
                 _amount1,
-                _execData.exchRate1,
-                _maxSlippageFactor,
-                _execData.pathToken1,
+                _data.exchRate1,
+                _data.maxSlippageFactor,
+                _data.pathToken1,
                 address(this)
             );
         }
@@ -453,18 +392,6 @@ contract StratUniswapV3 is StratBase, IStratUniswapV3 {
         if (_amount1 < _amount1Avail) {
             _token1.safeTransfer(_recipient, _amount1Avail - _amount1);
         }
-    }
-
-    /// @notice Given a UniswapV3 multihop path and index of the token, decodes the address
-    /// @dev Visibility is public so that functions with bytes memory can convert to call data to perform slice logic
-    /// @param _path The UniswapV3 multihop path
-    /// @param _index The index where the token exists in the multihop path
-    /// @return token The address of the token
-    function getTokenFromPath(bytes calldata _path, int256 _index) public returns (address token) {
-        if (_index >= 0) {
-            return Utils.bytesToAddress(_path[uint256(_index):uint256(_index)+20]);
-        }
-        return Utils.bytesToAddress(_path[_path.length-uint256(_index):]);
     }
 
     /* Proxy implementations */

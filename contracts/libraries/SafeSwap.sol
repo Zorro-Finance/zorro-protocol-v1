@@ -37,7 +37,6 @@ library SafeSwapUni {
         address _recipient
     ) internal returns (uint256 amountOut) {
         // Safety
-        // TODO: Go through all require statements and ensure there's a ZORRO: Prefix for safety
         // Check to make sure the path has at least one uint24 fee + address token pair (3+20)
         require(_path.length >= 46, "ZORRO: notfullUniV3Path");
 
@@ -53,7 +52,6 @@ library SafeSwapUni {
         // Perform swap
         amountOut = _safeSwap(
             _uniRouter,
-            _tokenIn,
             _exactAmountIn,
             _minAmountOut,
             _path,
@@ -64,7 +62,6 @@ library SafeSwapUni {
 
     /// @notice Internal function for safely swapping tokens (lower level than above func)
     /// @param _uniRouter Uniswap V3 router
-    /// @param _tokenIn The address of the input token
     /// @param _exactAmountIn The exact quantity of the origin token to swap
     /// @param _minAmountOut The minimum quantity of destination token to be obtained
     /// @param _path Path for V3 multihops https://docs.uniswap.org/contracts/v3/guides/swaps/multihop-swaps
@@ -73,7 +70,6 @@ library SafeSwapUni {
     /// @return amountOut The quantity of tokens obtained from the swap
     function _safeSwap(
         ISwapRouter _uniRouter,
-        address _tokenIn,
         uint256 _exactAmountIn,
         uint256 _minAmountOut,
         bytes memory _path,
@@ -81,7 +77,7 @@ library SafeSwapUni {
         uint256 _deadline
     ) private returns (uint256 amountOut) {
         // Requirements
-        require(_exactAmountIn > 0, "amountIn zero");
+        require(_exactAmountIn > 0, "ZORRO: amountIn zero");
 
         // Perform swap
         ISwapRouter.ExactInputParams memory _params =

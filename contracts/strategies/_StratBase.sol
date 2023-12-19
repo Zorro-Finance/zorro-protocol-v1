@@ -37,13 +37,13 @@ abstract contract StratBase is
     /* Constructor */
 
     /// @notice Upgradeable constructor
-    /// @param _initVal A StratInit struct
     /// @param _timelockOwner The owner address (timelock)
     /// @param _gov The governor address for non timelock admin functions
+    /// @param _initVal A StratInit struct
     function __StratBase_init(
-        StratInit memory _initVal,
         address _timelockOwner,
-        address _gov
+        address _gov,
+        StratInit calldata _initVal
     ) public onlyInitializing {
         // Set initial values
         treasury = _initVal.treasury;
@@ -72,7 +72,7 @@ abstract contract StratBase is
     /* Modifiers */
 
     modifier onlyAllowGov() {
-        require(_msgSender() == gov, "!gov");
+        require(_msgSender() == gov, "ZORRO: !gov");
         _;
     }
 
